@@ -24,7 +24,6 @@ source venv/bin/activate
 
 
 # 运行 run.sh 脚本
-# chmod +x run.sh
 bash ./run.sh
 
 
