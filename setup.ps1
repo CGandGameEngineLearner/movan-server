@@ -1,5 +1,5 @@
 # 定义 Python 安装程序的Python版本，跳过华为云下载指定版本的 Python 安装程序
-$pythonVersion = "3.13.0"
+$pythonVersion = "3.13.1"
 
 # 只保留 $pythonVersion 的纯数字部分 后续会加上python前缀 作为安装路径的文件夹名
 $pythonVersionNumericString = $pythonVersion -replace '\D', ''

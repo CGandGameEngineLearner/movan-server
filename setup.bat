@@ -2,7 +2,7 @@
 setlocal
 
 REM 定义 Python 版本
-set "pythonVersion=3.13.0"
+set "pythonVersion=3.13.1"
 
 REM 只保留 pythonVersion 的纯数字部分
 for /f "delims=." %%i in ("%pythonVersion%") do set "pythonVersionNumericString=%%i%%j%%k"
