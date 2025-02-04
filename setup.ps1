@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 # 定义 Python 版本
-$pythonVersion = "3.13.1"
+$pythonVersion = "3.12.8"
 
 # 只保留 pythonVersion 的纯数字部分
 $pythonVersionNumericString = $pythonVersion -replace '\.', ''
@@ -46,21 +46,29 @@ if ($pythonInstalled) {
     Write-Output "正在安装 Python，请稍候..."
     Start-Process -FilePath $installerFile -ArgumentList "/quiet InstallAllUsers=0 PrependPath=1 DefaultJustForMeTargetDir=$userInstallPath" -Wait
 
-    # 将 Python 添加到系统环境变量中
-    [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$userInstallPath", [EnvironmentVariableTarget]::User)
+    # 检查 Python 是否成功安装
+    if (Test-Path "$userInstallPath\python.exe") {
+        Write-Output "Python 安装成功。"
 
-    # 将 Python 添加到注册表
-    $pythonPath = "$userInstallPath\python.exe"
-    New-Item -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Force
-    Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "(default)" -Value $pythonVersion
-    Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "InstallPath" -Value $userInstallPath
-    Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "ExecutablePath" -Value $pythonPath
+        # 将 Python 添加到系统环境变量中
+        [Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$userInstallPath", [EnvironmentVariableTarget]::User)
 
-    # 删除安装程序
-    Write-Output "Python 安装完成！删除安装程序..."
-    Remove-Item -Path $installerFile
+        # 将 Python 添加到注册表
+        $pythonPath = "$userInstallPath\python.exe"
+        New-Item -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Force
+        Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "(default)" -Value $pythonVersion
+        Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "InstallPath" -Value $userInstallPath
+        Set-ItemProperty -Path "HKCU:\Software\Python\PythonCore\$pythonVersion" -Name "ExecutablePath" -Value $pythonPath
 
-    Write-Output "Python $pythonVersion 已安装成功"
+        # 删除安装程序
+        Write-Output "Python 安装完成！删除安装程序..."
+        Remove-Item -Path $installerFile
+
+        Write-Output "Python $pythonVersion 已安装成功"
+    } else {
+        Write-Output "Python 安装失败，请检查安装程序和安装路径。"
+        exit 1
+    }
 }
 
 # 创建虚拟环境
