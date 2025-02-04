@@ -1,0 +1,15 @@
+[KCP]
+no_delay = true
+update_interval = 10
+resend_count = 2
+no_congestion_control = true
+
+[Network]
+host = "127.0.0.1"
+port = 2025
+
+
+
+[Server]
+initial_num_of_rooms = 4
+max_num_of_rooms = 8
