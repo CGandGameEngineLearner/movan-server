@@ -1,4 +1,4 @@
-from aiokcp import create_server, KCPStreamTransport
+from aiokcp import create_server,create_connection, KCPStreamTransport
 from aiokcp.crypto import AES_CBC
 from aiokcp.sync import KCPSocket, KCPServer
 import msgpack
@@ -140,3 +140,5 @@ SYNC_SERVER = SyncServer(
 
 if __name__ == '__main__':
     asyncio.run(SYNC_SERVER.start())
+
+    
