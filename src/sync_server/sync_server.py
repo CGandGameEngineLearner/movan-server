@@ -1,9 +1,9 @@
 from aiokcp import create_server,KCPStreamTransport
-from aiokcp.crypto import get_crypto
+from aiokcp.crypto import AES_CBC
 from aiokcp.sync import KCPSocket,KCPServer
 import msgpack
-from typing import Dict,List
-from sync_core import SyncCore
+from typing import Dict,List,Any,Optional,Union,Tuple
+from room import Room
 import asyncio
 import toml
 import os
@@ -27,9 +27,10 @@ class SyncServer:
         self.port = port
         self.sync_core_count: int = 0
         self.transport_dict: Dict[str,KCPSocket] = {}
-        self.core_dict: Dict[int,SyncCore] = {}
+        self.room_dict: Dict[int,Room] = {}
+        self.max_num_of_rooms = max_num_of_rooms
         for i in range(initial_num_of_rooms):
-            self.core_dict[i] = SyncCore(host, port)
+            self.room_dict[i] = Room(host, port)
             self.sync_core_count += 1
 
         self.kcp_server: KCPServer = create_server(
@@ -42,14 +43,15 @@ class SyncServer:
         
         
     def allocate_user(self, uid: str, ip_address:str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+        crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
         self.user_info[uid] = {
             'token': token,
-            'ip_address': ip_address,
             'room_id': room_id,
-            'crypto_key': crypto_key,
-            'crypto_salt': crypto_salt,
-            
+            'crypto': crypto,
             }
+        
+    def remove_user(self,uid):
+        pass
         
         
 
@@ -68,50 +70,61 @@ class SyncServer:
             SYNC_SERVER.data_received(self.transport, data)
         
 
-    def data_received(self, transport:KCPStreamTransport, data:bytes):
+    def data_received(self, transport:KCPStreamTransport, msg:bytes):
         try:
-            peername = transport.get_extra_info('peername')
-            ip_address = peername[0]
-            msg = msgpack.unpackb(data)
-            uid = msg.get('uid')
-            if uid == None or uid not in self.user_info:
+            msg = self.decrypt_msg(msg)
+            if msg is None:
                 return
-            
-            if self.user_info[uid]['ip_address'] != ip_address:
-                return
-            
-            proto = msg.get('proto')
-            
-            if proto == 'authentication':
-                self.authentication_handler(msg)
-            else:
-                logger.warning("unkown proto")          
-           
+               
         except Exception as e:
             logger.warning(e)
             return
-            
     
-    def authentication_handler(self, msg):
-        uid = msg.get('uid')
-        token = msg.get('token')
-        if not uid or not token:
-            return
+    def encrypt_msg(self,uid:str, proto:str, data:Any)->bytes:
+        data = msgpack.pack(data)
+        crypto: AES_CBC = self.user_info["crypto"]
+        data = crypto.encrypt(data)
+        msg = {"uid":uid, "proto":proto, "data":data}
+        msg = msgpack.pack(data)
+        return msg
     
-        if uid not in self.user_info:
-            return
-        
-        if token != self.user_info[uid].get('token'):
-            return
-        
-        logger.info(f"{msg}")
-        
-        
-    
-                
-    
+    def decrypt_msg(self, msg:bytes)->Optional[dict]:
+        try:
+            msg = msgpack.unpack(msg)
+        except Exception as e:
+            logger.warning(e)
+            return None
 
-    def start(self):
+        uid = msg.get('uid')
+        
+        if uid not in self.user_info:
+            return None
+        
+        proto = msg.get('proto')
+        if not isinstance(proto,str):
+            return
+
+        data = msg.get('data')
+        if not isinstance(data,dict):
+            return
+        
+        crypto: AES_CBC = self.user_info["crypto"]
+        
+        try:
+            data = crypto.decrypt(data)
+            data = msgpack.unpack(data)
+        except Exception as e:
+            logger.warning(e)
+            return None
+        
+        token:str = data['token']
+        if token != self.user_info[uid]['token']:
+            logger.warning(f"UID为{uid}的客户端发来消息的token错误")
+            return None
+
+        return {'uid':uid,'proto':proto,'data':data}
+
+    async def loop(self):
         while True:
             sock, _ = self.kcp_server.handle_request
             msg = sock.recv(1024)
@@ -124,14 +137,21 @@ class SyncServer:
                     logger.info('Unknown protocol')    
             except Exception as e:
                 logger.info(e)
+
+    def start(self):
+        asyncio.run(self.loop())
+       
     
     
 
-crypto_key = config['SyncServer']['crypto']['key']
-crypto_salt = config['SyncServer']['crypto']['salt']
+
 SYNC_SERVER = SyncServer(
     config['Network']['host'], 
     config['Network']['port'],
     config['SyncServer']['initial_num_of_rooms'],
     config['SyncServer']['max_num_of_rooms'],
     )
+
+
+if __name__ == '__main__':
+    SYNC_SERVER.start()
