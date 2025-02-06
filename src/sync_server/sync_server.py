@@ -48,7 +48,7 @@ class SyncServer:
             await self.kcp_server.serve_forever()
         
 
-    def allocate_user(self, uid: str, ip_address: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+    def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
         crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
         self.user_info[uid] = {
             'token': token,
