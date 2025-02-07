@@ -8,6 +8,7 @@ import asyncio
 import toml
 import os
 from loguru import logger
+import utils
 
 # 获取当前文件的目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +50,8 @@ class SyncServer:
         self.kcp_server: Optional[KCPServer] = None
         self.user_info: Dict = {}
         self.proto_dict:Dict[str, SyncServer.Protocol] = {}
+        self.token_dict:Dict[str,str] = {}
+        self.crypto_dict:Dict[str,AES_CBC] = {}
 
     
 
@@ -68,12 +71,13 @@ class SyncServer:
         
 
     def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+        self.token_dict[uid] = token
         crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
+        self.crypto_dict[uid] = crypto
         self.user_info[uid] = {
-            'token': token,
             'room_id': room_id,
-            'crypto': crypto,
         }
+
 
     def remove_user(self, uid):
         pass
@@ -94,7 +98,11 @@ class SyncServer:
 
         def data_received(self, data:bytes):
             try:
-                msg = self.decrypt_msg(data)
+                msg = utils.decrypt_msg(
+                    data,
+                    self.sync_server.token_dict,
+                    self.sync_server.crypto_dict
+                )
                 if msg is None:
                     return
                 self.sync_server.msg_received(msg)
@@ -102,80 +110,10 @@ class SyncServer:
                 logger.warning(e)
                 return
 
-    
-        def encrypt_msg(self, uid: str, proto: str, data: Any, timestamp: float) -> bytes:
-            user_info = self.sync_server.get_user_info(uid)
-            crypto: AES_CBC = user_info["crypto"]
-            
-            # 加密数据
-            data_bytes = msgpack.packb(data)
-            encrypted_data = crypto.encrypt(data_bytes)
-            
-            # 加密额外数据
-            extra_data = {"proto": proto, "timestamp": timestamp, "token": user_info['token']}
-            extra_data_bytes = msgpack.packb(extra_data)
-            encrypted_extra_data = crypto.encrypt(extra_data_bytes)
-            
-            # 打包消息
-            msg = {"uid": uid, "data": encrypted_data, "extra_data": encrypted_extra_data}
-            return msgpack.packb(msg)
 
-        def decrypt_msg(self, data: bytes) -> Optional[dict]:
-            try:
-                msg = msgpack.unpackb(data)
-            except Exception as e:
-                logger.warning(f"Failed to unpack message: {e}")
-                return None
-
-            uid = msg.get('uid')
-            if uid not in self.sync_server.user_info:
-                logger.warning(f"Unknown user ID: {uid}")
-                return None
-            
-            user_info = self.sync_server.get_user_info(uid)
-            crypto: AES_CBC = user_info["crypto"]
-
-            try:
-                # 解密数据
-                encrypted_data = msg.get('data')
-                if not isinstance(encrypted_data, bytes):
-                    logger.warning(f"Invalid data format for UID: {uid}")
-                    return None
-                decrypted_data = crypto.decrypt(encrypted_data)
-                data = msgpack.unpackb(decrypted_data)
-
-                # 解密额外数据
-                encrypted_extra_data = msg.get('extra_data')
-                if not isinstance(encrypted_extra_data, bytes):
-                    logger.warning(f"Invalid extra_data format for UID: {uid}")
-                    return None
-                decrypted_extra_data = crypto.decrypt(encrypted_extra_data)
-                extra_data = msgpack.unpackb(decrypted_extra_data)
-
-                # 验证额外数据
-                proto = extra_data.get('proto')
-                if not isinstance(proto, str):
-                    logger.warning(f"Invalid proto format for UID: {uid}")
-                    return None
-                
-                token = extra_data.get('token')
-                if token != user_info['token']:
-                    logger.warning(f"Invalid token for UID: {uid}")
-                    return None
-                
-                timestamp = extra_data.get('timestamp')
-                if not isinstance(timestamp, float):
-                    logger.warning(f"Invalid timestamp format for UID: {uid}")
-                    return None
-
-                return {"uid": uid, "data": data, "extra_data": extra_data}
-            except Exception as e:
-                logger.warning(f"Error decrypting message: {e}")
-                return None
-
-    async def msg_received(self,msg:dict):
+    def msg_received(self,msg:dict):
         if msg['extra_data']['proto'] == 'join_room':
-            logger.info(f"UID为{msg['uid']}的客户端发送了个加入请求")
+            logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")
 
     async def start(self):
         await self.initialize_server()
@@ -191,10 +129,11 @@ SYNC_SERVER = SyncServer(
 
 if __name__ == '__main__':
     logger.info("Sync server started")
-    asyncio.run(SYNC_SERVER.start())
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
     SYNC_SERVER.allocate_user('lifesize','114514',1,crypto_key,crypto_salt)
+    asyncio.run(SYNC_SERVER.start())
+    
     
 
     

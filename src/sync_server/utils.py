@@ -17,7 +17,7 @@ def encrypt_msg(uid: str, token:str,proto: str, data: Any, timestamp: float,cryp
     msg = {"uid": uid, "data": encrypted_data, "extra_data": encrypted_extra_data}
     return msgpack.packb(msg)
 
-def decrypt_msg(data: bytes, token:str, crypto:AES_CBC) -> Optional[dict]:
+def decrypt_msg(data: bytes, token_dict:Dict[str,str], crypto_dict:Dict[str,AES_CBC]) -> Optional[dict]:
     try:
         msg = msgpack.unpackb(data)
     except Exception as e:
@@ -29,6 +29,7 @@ def decrypt_msg(data: bytes, token:str, crypto:AES_CBC) -> Optional[dict]:
         logger.warning(f"Message no uid")
         return None
     
+    crypto: AES_CBC= crypto_dict[uid]
 
     try:
         # 解密数据
@@ -54,7 +55,7 @@ def decrypt_msg(data: bytes, token:str, crypto:AES_CBC) -> Optional[dict]:
             return None
         
         msg_token = extra_data.get('token')
-        if msg_token != token:
+        if msg_token != token_dict[uid]:
             logger.warning(f"Invalid token for UID: {uid}")
             return None
         
@@ -73,8 +74,10 @@ if __name__ == '__main__':
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
     crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
+    crypto_dict = {'1234567890':crypto}
+    token_dict = {'1234567890':'token'}
 
 
     origin_msg = encrypt_msg("1234567890", "token", "proto", {"data": "hello"}, 1693548000.00, crypto)
 
-    print(decrypt_msg(origin_msg, "token", crypto))
+    print(decrypt_msg(origin_msg,token_dict,crypto_dict))
