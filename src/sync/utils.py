@@ -76,8 +76,9 @@ if __name__ == '__main__':
     crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
     crypto_dict = {'1234567890':crypto}
     token_dict = {'1234567890':'token'}
-
-
+    import time
+    start = time.time()
     origin_msg = encrypt_msg("1234567890", "token", "proto", {"data": "hello"}, 1693548000.00, crypto)
 
     print(decrypt_msg(origin_msg,token_dict,crypto_dict))
+    print(time.time()-start)

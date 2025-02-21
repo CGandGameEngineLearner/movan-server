@@ -9,15 +9,9 @@ import toml
 import os
 from loguru import logger
 import utils
+import time
 
-# 获取当前文件的目录
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# 构建 config.toml 文件的绝对路径
-config_path = os.path.join(current_dir, 'config.toml')
-
-# 读取并解析 TOML 文件
-config = toml.load(config_path)
+from config import config
 
 logger.add(
     sink=config['Log']['sink'],
@@ -105,18 +99,30 @@ class SyncServer:
                 )
                 if msg is None:
                     return
-                self.sync_server.msg_received(msg)
+                self.sync_server.msg_received(msg,self.transport)
             except Exception as e:
                 logger.warning(e)
                 return
 
 
-    def msg_received(self,msg:dict):
-        if msg['extra_data']['proto'] == 'join_room':
-            logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")
+    def msg_received(self,msg:dict,transport:KCPStreamTransport):
 
-    async def start(self):
-        await self.initialize_server()
+        uid = msg['uid']
+        self.transport_dict[uid] = transport
+
+        if msg['extra_data']['proto'] == 'join_room':
+            self._join_room(msg)
+
+    def send_msg(self,uid: str, proto: str, data: Any):
+        msg:bytes = utils.encrypt_msg(uid,proto,self.token_dict[uid],data,time.time(),self.crypto_dict[uid])
+        self.transport_dict[uid].send(msg)
+        
+
+    def _join_room(self,msg:dict):
+        logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")
+
+    async def run(self):
+        await self.initialize_server() 
         
 
 
@@ -132,7 +138,7 @@ if __name__ == '__main__':
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
     SYNC_SERVER.allocate_user('lifesize','114514',1,crypto_key,crypto_salt)
-    asyncio.run(SYNC_SERVER.start())
+    asyncio.run(SYNC_SERVER.run())
     
     
 
