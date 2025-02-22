@@ -32,14 +32,16 @@ class SyncServer:
     def __init__(self, host: str, port: int, initial_num_of_rooms: int, max_num_of_rooms: int, kcp_kwargs=None):
         self.host = host
         self.port = port
-        self.sync_core_count: int = 0
-        self.transport_dict: Dict[str, KCPSocket] = {}
-        self.room_dict: Dict[int, Room] = {}
+        
+        self.transport_dict: Dict[str, KCPStreamTransport] = {}
+        self.room_list: List[Room] = []
         self.max_num_of_rooms = max_num_of_rooms
         self.kcp_kwargs:dict = kcp_kwargs
+
         for i in range(initial_num_of_rooms):
-            self.room_dict[i] = Room(i)
-            self.sync_core_count += 1
+            self.room_list.append(Room(i))
+
+        
 
         self.kcp_server: Optional[KCPServer] = None
         self.user_info: Dict = {}
@@ -108,15 +110,24 @@ class SyncServer:
     def msg_received(self,msg:dict,transport:KCPStreamTransport):
 
         uid = msg['uid']
-        self.transport_dict[uid] = transport
-
-        if msg['extra_data']['proto'] == 'join_room':
-            self._join_room(msg)
-
-    def send_msg(self,uid: str, proto: str, data: Any):
-        msg:bytes = utils.encrypt_msg(uid,proto,self.token_dict[uid],data,time.time(),self.crypto_dict[uid])
-        self.transport_dict[uid].send(msg)
         
+        self.transport_dict[uid] = transport
+        
+        proto = msg['extra_data']['proto']
+
+        if proto == 'join_room':
+            self._join_room(msg)
+        elif proto == 'action':
+            self._action(msg)
+
+    def send_msg(self, uid: str, proto: str, data: Any):
+        msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
+        self.transport_dict[uid].write(msg)
+        
+    def _action(self,msg:dict):
+        uid = msg['uid']
+        room_id:int = self.user_info[uid]['room_id']
+        self.room_list[room_id].receive_action(msg)
 
     def _join_room(self,msg:dict):
         logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")

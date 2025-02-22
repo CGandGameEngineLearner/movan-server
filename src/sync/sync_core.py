@@ -7,11 +7,11 @@ from sync_server import SyncServer
 
 
 class SyncCore:
-    def __init__(self,player_num:int,sync_server:SyncServer):
+    def __init__(self, sync_server:SyncServer):
         self.frames:List = []
         self.running:bool = False
-        self.action_buffer:list = []
-        self.player_num:int = player_num
+        self.action_buffer:List[dict] = []
+        self.user_dict:dict = []
         self.mutex = threading.Lock()
         self.frame_count:int = 0
         self.update_interval = config["SyncCore"]["update_interval"]
@@ -22,6 +22,8 @@ class SyncCore:
         while self.running:
             self.mutex.acquire()
 
+            self.action_buffer.sort(key=lambda x:x['extra_data']['timestamp'])
+            self.broadcast_actions(self.action_buffer)
             self.frames.append(self.action_buffer)
             self.action_buffer.clear()
             self.frame_count += 1
@@ -32,13 +34,17 @@ class SyncCore:
             
             
     
-    async def stop(self):
+    def stop(self):
         self.running = False
         
     def receive_action(self,opertation):
         self.mutex.acquire()
         self.action_buffer.append(opertation)
         self.mutex.release()
+
+    def broadcast_actions(self,actions:list):
+        for uid in self.user_dict:
+            self.sync_server.send_msg(uid,'sync_actions',actions)
 
     
 
