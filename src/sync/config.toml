@@ -10,8 +10,7 @@ port = 2025
 
 
 [Server]
-initial_num_of_rooms = 4
-max_num_of_rooms = 8
+num_of_rooms = 4
 
 
 [Log]

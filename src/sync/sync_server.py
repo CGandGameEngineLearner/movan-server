@@ -1,17 +1,18 @@
 from aiokcp import create_server,create_connection, KCPStreamTransport
 from aiokcp.crypto import AES_CBC
-from aiokcp.sync import KCPSocket, KCPServer
-import msgpack
+from aiokcp.sync import KCPServer
 from typing import Dict, List, Any, Optional, Union, Tuple
 from room import Room
 import asyncio
-import toml
-import os
+
 from loguru import logger
 import utils
 import time
-
+from sync_server_interface import SyncServerInterface
+from base.singleton import singleton
 from config import config
+
+from user_info_manager import user_info_manager
 
 logger.add(
     sink=config['Log']['sink'],
@@ -27,24 +28,24 @@ logger.add(
 
 
 
-
-class SyncServer:
-    def __init__(self, host: str, port: int, initial_num_of_rooms: int, max_num_of_rooms: int, kcp_kwargs=None):
+@singleton
+class SyncServer(SyncServerInterface):
+    def __init__(self, host: str, port: int, num_of_rooms: int, kcp_kwargs=None):
         self.host = host
         self.port = port
         
         self.transport_dict: Dict[str, KCPStreamTransport] = {}
         self.room_list: List[Room] = []
-        self.max_num_of_rooms = max_num_of_rooms
+        self.max_num_of_rooms = num_of_rooms
         self.kcp_kwargs:dict = kcp_kwargs
 
-        for i in range(initial_num_of_rooms):
-            self.room_list.append(Room(i))
+        for i in range(num_of_rooms):
+            self.room_list.append(Room(i,self))
 
         
 
         self.kcp_server: Optional[KCPServer] = None
-        self.user_info: Dict = {}
+   
         self.proto_dict:Dict[str, SyncServer.Protocol] = {}
         self.token_dict:Dict[str,str] = {}
         self.crypto_dict:Dict[str,AES_CBC] = {}
@@ -62,29 +63,49 @@ class SyncServer:
         async with self.kcp_server:
             await self.kcp_server.serve_forever()
     
-    def add_proto(self,uid:str,proto):
-        self.proto_dict[uid] = proto
         
 
     def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
         self.token_dict[uid] = token
         crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
         self.crypto_dict[uid] = crypto
-        self.user_info[uid] = {
-            'room_id': room_id,
-        }
+        user_info_manager.set_user_info(uid,{"room_id":room_id})
 
 
     def remove_user(self, uid):
         pass
 
-    def get_user_info(self, uid: str):
-        return self.user_info.get(uid)
     
+    
+
+   
+
+
+    def msg_received(self,msg:dict,transport:KCPStreamTransport):
+
+        uid = msg['uid']
+        
+        self.transport_dict[uid] = transport
+        
+        proto = msg['extra_data']['proto']
+
+        if proto == 'join_room':
+            self._join_room(msg)
+        elif proto == 'action':
+            self._action(msg)
+
+    def send_msg(self, uid: str, proto: str, data: dict):
+        msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
+        self.transport_dict[uid].write(msg)
+        
+    
+    async def run(self):
+        await self.initialize_server() 
+
 
     class Protocol(asyncio.Protocol):
         def __init__(self):
-            self.sync_server = SYNC_SERVER
+            self.sync_server = sync_server
             
 
         def connection_made(self, transport):
@@ -106,50 +127,34 @@ class SyncServer:
                 logger.warning(e)
                 return
 
-
-    def msg_received(self,msg:dict,transport:KCPStreamTransport):
-
-        uid = msg['uid']
-        
-        self.transport_dict[uid] = transport
-        
-        proto = msg['extra_data']['proto']
-
-        if proto == 'join_room':
-            self._join_room(msg)
-        elif proto == 'action':
-            self._action(msg)
-
-    def send_msg(self, uid: str, proto: str, data: Any):
-        msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
-        self.transport_dict[uid].write(msg)
-        
     def _action(self,msg:dict):
         uid = msg['uid']
-        room_id:int = self.user_info[uid]['room_id']
+        room_id:int = user_info_manager.get_user_info(uid)['room_id']
         self.room_list[room_id].receive_action(msg)
 
     def _join_room(self,msg:dict):
         logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")
-
-    async def run(self):
-        await self.initialize_server() 
         
+kcp_kwargs = {
+    'no_delay'              : config['KCP']['no_delay'],
+    'update_interval'       : config['KCP']['update_interval'],
+    'resend_count'          : config['KCP']['resend_count'],
+    'no_congestion_control' : config['KCP']['no_congestion_control']
+}
 
-
-SYNC_SERVER = SyncServer(
+sync_server = SyncServer(
     config['Network']['host'],
     config['Network']['port'],
-    config['Server']['initial_num_of_rooms'],
-    config['Server']['max_num_of_rooms'],
+    config['Server']['num_of_rooms'],
+    kcp_kwargs
 )
 
 if __name__ == '__main__':
     logger.info("Sync server started")
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
-    SYNC_SERVER.allocate_user('lifesize','114514',1,crypto_key,crypto_salt)
-    asyncio.run(SYNC_SERVER.run())
+    sync_server.allocate_user('lifesize','114514',0,crypto_key,crypto_salt)
+    asyncio.run(sync_server.run())
     
     
 
