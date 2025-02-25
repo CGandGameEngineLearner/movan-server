@@ -2,6 +2,7 @@ from sync_core import SyncCore
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
 import config
+from loguru import logger
 class Room:
 
     thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
@@ -11,13 +12,13 @@ class Room:
         self.sync_core:SyncCore = SyncCore(sync_server)
         self.user_set: set = set()
 
-    def msg_receive(self,msg:dict):
-        pass    
+    
     
     def receive_action(self,msg:dict):
         self.sync_core.receive_action(msg)
 
-    def join_room(self,uid:int,user_info:dict):
+    def _enter_room_msg_handle(self,msg:dict):
+        uid = msg.get('uid')
         self.user_set.add(uid)
         self.sync_core.add_user(uid)
 
@@ -31,5 +32,16 @@ class Room:
     def stop(self):
         self.sync_core.stop()
 
-    
-    
+
+    def room_msg_handle(self,msg:dict):
+        
+        try:
+            proto:str = msg['data']['proto']
+        except Exception as e:
+            logger.error(e)
+            return
+        
+        if proto == "enter_room":
+            self._enter_room_msg_handle(msg)
+        else:
+            return

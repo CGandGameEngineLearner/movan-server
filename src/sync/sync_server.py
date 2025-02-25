@@ -94,10 +94,12 @@ class SyncServer(SyncServerInterface):
         
         proto = msg['extra_data']['proto']
 
-        if proto == 'join_room':
-            self._join_room(msg)
+        if proto == 'room':
+            self._room_msg_handle(msg)
         elif proto == 'action':
-            self._action(msg)
+            self._action_msg_handle(msg)
+        
+            
 
     def msg_received(self, msg:dict,transport:KCPStreamTransport):
         self.thread_pool.submit(self.message_handle,msg,transport)
@@ -138,16 +140,15 @@ class SyncServer(SyncServerInterface):
     
     
 
-    def _action(self,msg:dict):
+    def _action_msg_handle(self,msg:dict):
         uid = msg['uid']
         room_id:int = user_info_manager.get_user_info(uid)['room_id']
         self.room_list[room_id].receive_action(msg)
 
-    def _join_room(self,msg:dict):
-        logger.info(f"UID为\"{msg['uid']}\"的客户端发送了进入房间的请求")
+    def _room_msg_handle(self,msg:dict):
         uid = msg['uid']
         room_id:int = self.get_user_info(uid)['room_id']
-        self.room_list[room_id].join_room(uid,self.get_user_info(uid))
+        self.room_list[room_id].room_msg_handle(msg)
 
         
 kcp_kwargs = {
