@@ -45,5 +45,13 @@ class SyncCore:
             data: dict = {"frame_cout": frame_count, "actions": actions}
             self.sync_server.send_msg(uid, "sync_actions", data)
 
+    def reload_actions(self,uid:int, start_frame:int):
+        data = []
+        for i in range(start_frame,len(self.frames)):
+            data.append({"frame_cout": i, "actions": self.frames[i]})
+
+        self.sync_server.send_msg(uid,"reload_actions",)
+
+
     def add_user(self, uid: str):
         self.user_set.add(uid)

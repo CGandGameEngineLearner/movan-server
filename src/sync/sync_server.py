@@ -15,7 +15,8 @@ from config import config
 from user_info_manager import user_info_manager
 
 from concurrent.futures import ThreadPoolExecutor
-
+from threading import RLock
+from contextlib import contextmanager
 
 logger.add(
     sink=config['Log']['sink'],
@@ -54,6 +55,23 @@ class SyncServer(SyncServerInterface):
         self.crypto_dict:Dict[str,AES_CBC] = {}
         self.thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
 
+        self._lock = RLock()  # 使用可重入锁
+        
+    @contextmanager
+    def _safe_operation(self, operation: str):
+        """
+        安全操作的上下文管理器
+        用于确保所有操作都是线程安全的，并提供适当的错误处理
+        """
+        try:
+            self._lock.acquire()
+            yield
+        except Exception as e:
+            logger.error(f"Error during {operation}: {e}")
+            raise
+        finally:
+            self._lock.release()
+
     def __del__(self):
         self.thread_pool.shutdown(wait=True)
 
@@ -71,27 +89,27 @@ class SyncServer(SyncServerInterface):
         
 
     def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
-        self.token_dict[uid] = token
-        crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
-        self.crypto_dict[uid] = crypto
+        with self._safe_operation("allocate_user"):
+            self.token_dict[uid] = token
+            crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
+            self.crypto_dict[uid] = crypto
         user_info_manager.set_user_info(uid,{"room_id":room_id})
 
 
     def remove_user(self, uid):
+        with self._safe_operation("remove_user"):
+            user_info_manager.remove_user_info(uid)
+            self.transport_dict.pop(uid, None)
+            self.token_dict.pop(uid, None)
+            self.crypto_dict.pop(uid, None)
         user_info_manager.remove_user_info(uid)
-
     
     
 
    
 
 
-    def message_handle(self,msg:dict,transport:KCPStreamTransport):
-
-        uid = msg['uid']
-        
-        self.transport_dict[uid] = transport
-        
+    def message_handle(self,msg:dict):
         proto = msg['extra_data']['proto']
 
         if proto == 'room':
@@ -102,11 +120,17 @@ class SyncServer(SyncServerInterface):
             
 
     def msg_received(self, msg:dict,transport:KCPStreamTransport):
-        self.thread_pool.submit(self.message_handle,msg,transport)
+
+        uid = msg['uid']
+
+        with self._safe_operation("update transport"):
+            self.transport_dict[uid] = transport
+        self.thread_pool.submit(self.message_handle,msg)
 
     def send_msg(self, uid: str, proto: str, data: dict):
-        msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
-        self.transport_dict[uid].write(msg)
+        with self._safe_operation("send_msg"):
+            msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
+            self.transport_dict[uid].write(msg)
     
         
     
