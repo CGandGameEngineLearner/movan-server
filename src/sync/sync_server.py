@@ -14,6 +14,9 @@ from config import config
 
 from user_info_manager import user_info_manager
 
+from concurrent.futures import ThreadPoolExecutor
+
+
 logger.add(
     sink=config['Log']['sink'],
     rotation=config['Log']['rotation'],
@@ -49,8 +52,10 @@ class SyncServer(SyncServerInterface):
         self.proto_dict:Dict[str, SyncServer.Protocol] = {}
         self.token_dict:Dict[str,str] = {}
         self.crypto_dict:Dict[str,AES_CBC] = {}
+        self.thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
 
-    
+    def __del__(self):
+        self.thread_pool.shutdown(wait=True)
 
 
     async def initialize_server(self):
@@ -73,7 +78,7 @@ class SyncServer(SyncServerInterface):
 
 
     def remove_user(self, uid):
-        pass
+        user_info_manager.remove_user_info(uid)
 
     
     
@@ -81,7 +86,7 @@ class SyncServer(SyncServerInterface):
    
 
 
-    def msg_received(self,msg:dict,transport:KCPStreamTransport):
+    def message_handle(self,msg:dict,transport:KCPStreamTransport):
 
         uid = msg['uid']
         
@@ -94,9 +99,13 @@ class SyncServer(SyncServerInterface):
         elif proto == 'action':
             self._action(msg)
 
+    def msg_received(self, msg:dict,transport:KCPStreamTransport):
+        self.thread_pool.submit(self.message_handle,msg,transport)
+
     def send_msg(self, uid: str, proto: str, data: dict):
         msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
         self.transport_dict[uid].write(msg)
+    
         
     
     async def run(self):
@@ -126,6 +135,8 @@ class SyncServer(SyncServerInterface):
             except Exception as e:
                 logger.warning(e)
                 return
+    
+    
 
     def _action(self,msg:dict):
         uid = msg['uid']
@@ -133,7 +144,11 @@ class SyncServer(SyncServerInterface):
         self.room_list[room_id].receive_action(msg)
 
     def _join_room(self,msg:dict):
-        logger.info(f"UID为\"{msg['uid']}\"的客户端发送了个加入请求")
+        logger.info(f"UID为\"{msg['uid']}\"的客户端发送了进入房间的请求")
+        uid = msg['uid']
+        room_id:int = self.get_user_info(uid)['room_id']
+        self.room_list[room_id].join_room(uid,self.get_user_info(uid))
+
         
 kcp_kwargs = {
     'no_delay'              : config['KCP']['no_delay'],

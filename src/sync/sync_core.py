@@ -18,7 +18,7 @@ class SyncCore:
         self.update_interval = config["SyncCore"]["update_interval"]
         self.sync_server: SyncServerInterface = sync_server
 
-    async def run(self):
+    def run(self):
         self.running = True
         while self.running:
             self.mutex.acquire()
@@ -30,7 +30,7 @@ class SyncCore:
             self.frame_count += 1
 
             self.mutex.release()
-            await asyncio.sleep(self.update_interval / 1000)
+            time.sleep(self.update_interval / 1000)
 
     def stop(self):
         self.running = False

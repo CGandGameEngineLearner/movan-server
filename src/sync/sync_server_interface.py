@@ -16,7 +16,7 @@ class SyncServerInterface(ABC):
         pass
 
     @abstractmethod
-    def msg_received(self,msg:dict,transport:KCPStreamTransport):
+    def message_handle(self,msg:dict,transport:KCPStreamTransport):
         pass
 
     @abstractmethod
