@@ -29,6 +29,7 @@ logger.add(
     level=config['Log']['level'],
 )
 
+1
 
 
 
@@ -129,7 +130,7 @@ class SyncServer(SyncServerInterface):
 
     def send_msg(self, uid: str, proto: str, data: dict):
         with self._safe_operation("send_msg"):
-            msg: bytes = utils.encrypt_msg(uid, proto, self.token_dict[uid], data, time.time(), self.crypto_dict[uid])
+            msg: bytes = utils.encrypt_msg(uid,self.token_dict[uid], proto, data, time.time(), self.crypto_dict[uid])
             self.transport_dict[uid].write(msg)
     
         

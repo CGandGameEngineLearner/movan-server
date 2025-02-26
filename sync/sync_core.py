@@ -4,7 +4,6 @@ import threading
 import time
 from config import config
 from sync_server_interface import SyncServerInterface
-import asyncio
 
 
 class SyncCore:
@@ -50,7 +49,7 @@ class SyncCore:
         for i in range(start_frame,len(self.frames)):
             data.append({"frame_cout": i, "actions": self.frames[i]})
 
-        self.sync_server.send_msg(uid,"reload_actions",)
+        self.sync_server.send_msg(uid,"reload_actions",data)
 
 
     def add_user(self, uid: str):
