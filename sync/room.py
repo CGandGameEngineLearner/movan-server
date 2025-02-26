@@ -13,7 +13,7 @@ class Room:
         self.sync_core:SyncCore = SyncCore(sync_server)
         self.user_set: set = set()
         self.prepare_user_set:set = set()
-
+        self.running = False
     
     
     def receive_action(self,msg:dict):
@@ -32,13 +32,15 @@ class Room:
 
     def _prepare_handle(self,msg:dict):
         uid:str = msg.get('uid')
-        self.user_set.add(uid)
+        self.prepare_user_set.add(uid)
 
         # 如果所有人都准备好了 就开始
-        if len(self.user_set) == len(self.prepare_user_set):
+        if self.running == False and len(self.user_set) == len(self.prepare_user_set):
+            logger.info("第{self.room_id}号房间开始运行")
             self.run()
 
     def run(self):
+        self.running = True
         self.thread_pool.submit(self.sync_core.run())
 
     def stop(self):

@@ -1,4 +1,4 @@
-[KCP]
+[KCP] # 已配置为极速模式
 no_delay = true
 update_interval = 10
 resend_count = 2

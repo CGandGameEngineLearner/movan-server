@@ -46,7 +46,7 @@ def decrypt_msg(data: bytes, token_dict:Dict[str,str], crypto_dict:Dict[str,AES_
             logger.warning(f"Invalid extra_data format for UID: {uid}")
             return None
         decrypted_extra_data = crypto.decrypt(encrypted_extra_data)
-        extra_data = msgpack.unpackb(decrypted_extra_data)
+        extra_data:dict = msgpack.unpackb(decrypted_extra_data)
 
         # 验证额外数据
         proto = extra_data.get('proto')
@@ -58,6 +58,10 @@ def decrypt_msg(data: bytes, token_dict:Dict[str,str], crypto_dict:Dict[str,AES_
         if msg_token != token_dict[uid]:
             logger.warning(f"Invalid token for UID: {uid}")
             return None
+        
+        # 验证完token后就可以删除token了
+        extra_data.pop("token")
+        
         
         timestamp = extra_data.get('timestamp')
         if not isinstance(timestamp, float):

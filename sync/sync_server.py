@@ -109,7 +109,7 @@ class SyncServer(SyncServerInterface):
    
 
 
-    def message_handle(self,msg:dict):
+    def msg_handle(self,msg:dict):
         proto = msg['extra_data']['proto']
 
         if proto == 'room':
@@ -125,7 +125,7 @@ class SyncServer(SyncServerInterface):
 
         with self._safe_operation("update transport"):
             self.transport_dict[uid] = transport
-        self.thread_pool.submit(self.message_handle,msg)
+        self.thread_pool.submit(self.msg_handle,msg)
 
     def send_msg(self, uid: str, proto: str, data: dict):
         with self._safe_operation("send_msg"):
