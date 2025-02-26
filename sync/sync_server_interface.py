@@ -12,10 +12,6 @@ class SyncServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_user_info(self, uid: str):
-        pass
-
-    @abstractmethod
     def message_handle(self,msg:dict,transport:KCPStreamTransport):
         pass
 

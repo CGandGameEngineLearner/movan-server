@@ -120,7 +120,7 @@ class SyncServer(SyncServerInterface):
             
 
     def msg_received(self, msg:dict,transport:KCPStreamTransport):
-
+        logger.info(msg)
         uid = msg['uid']
 
         with self._safe_operation("update transport"):
@@ -171,7 +171,7 @@ class SyncServer(SyncServerInterface):
 
     def _room_msg_handle(self,msg:dict):
         uid = msg['uid']
-        room_id:int = self.get_user_info(uid)['room_id']
+        room_id:int = user_info_manager.get_user_info(uid)['room_id']
         self.room_list[room_id].room_msg_handle(msg)
 
         

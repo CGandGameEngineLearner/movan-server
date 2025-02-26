@@ -1,8 +1,9 @@
 from sync_core import SyncCore
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
-import config
+from config import config
 from loguru import logger
+
 class Room:
 
     thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
@@ -22,6 +23,7 @@ class Room:
         uid:str = msg.get('uid')
         self.user_set.add(uid)
         self.sync_core.add_user(uid)
+        logger.info(f"{uid} enter room")
 
     def _leave_room_msg_handle(self,msg:dict):
         uid:str = msg.get('uid')
@@ -32,6 +34,7 @@ class Room:
         uid:str = msg.get('uid')
         self.user_set.add(uid)
 
+        # 如果所有人都准备好了 就开始
         if len(self.user_set) == len(self.prepare_user_set):
             self.run()
 
