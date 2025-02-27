@@ -107,26 +107,23 @@ class SyncServer(SyncServerInterface):
     
     
 
-   
 
-
-    def msg_handle(self,msg:dict):
-        proto = msg['extra_data']['proto']
-
-        if proto == 'room':
-            self._room_msg_handle(msg)
-        elif proto == 'action':
-            self._action_msg_handle(msg)
+        
+        
         
             
 
-    def msg_received(self, msg:dict,transport:KCPStreamTransport):
+    def msg_handle(self, msg:dict,transport:KCPStreamTransport):
         logger.info(msg)
         uid = msg['uid']
 
         with self._safe_operation("update transport"):
             self.transport_dict[uid] = transport
-        self.thread_pool.submit(self.msg_handle,msg)
+
+        uid = msg['uid']
+        room_id:int = user_info_manager.get_user_info(uid)['room_id']
+        self.thread_pool.submit(self.room_list[room_id].msg_handle,msg)
+        
 
     def send_msg(self, uid: str, proto: str, data: dict):
         with self._safe_operation("send_msg"):
@@ -158,22 +155,13 @@ class SyncServer(SyncServerInterface):
                 )
                 if msg is None:
                     return
-                self.sync_server.msg_received(msg,self.transport)
+                self.sync_server.msg_handle(msg,self.transport)
             except Exception as e:
                 logger.warning(e)
                 return
     
     
 
-    def _action_msg_handle(self,msg:dict):
-        uid = msg['uid']
-        room_id:int = user_info_manager.get_user_info(uid)['room_id']
-        self.room_list[room_id].receive_action(msg)
-
-    def _room_msg_handle(self,msg:dict):
-        uid = msg['uid']
-        room_id:int = user_info_manager.get_user_info(uid)['room_id']
-        self.room_list[room_id].room_msg_handle(msg)
 
         
 kcp_kwargs = {

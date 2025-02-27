@@ -16,7 +16,7 @@ class Room:
         self.running = False
     
     
-    def receive_action(self,msg:dict):
+    def _action_handle(self,msg:dict):
         self.sync_core.receive_action(msg)
 
     def _enter_room_msg_handle(self,msg:dict):
@@ -39,6 +39,14 @@ class Room:
             logger.info("第{self.room_id}号房间开始运行")
             self.run()
 
+    def _sync_request_reload_frames_handle(self,msg:dict):
+        try:
+            start_frame = msg['data']["start_frame"]
+            uid = msg['uid']
+        except Exception as e:
+            logger.warning(e)
+        self.sync_core.reload_frames(uid,start_frame)
+
     def run(self):
         self.running = True
         self.thread_pool.submit(self.sync_core.run())
@@ -47,18 +55,22 @@ class Room:
         self.sync_core.stop()
 
 
-    def room_msg_handle(self,msg:dict):
+    def msg_handle(self,msg:dict):
         try:
-            proto:str = msg['data']['proto']
+            proto:str = msg['extra_data']['proto']
         except Exception as e:
             logger.error(e)
             return
         
-        if proto == "enter_room":
+        if proto == "room_enter":
             self._enter_room_msg_handle(msg)
-        elif proto == "leave_room":
+        elif proto == "room_leave":
             self._leave_room_msg_handle(msg)
-        elif proto == "prepare":
+        elif proto == "room_prepare":
             self._prepare_handle(msg)
+        elif proto == 'sync_actions':
+            self._action_handle(msg)
+        elif proto == 'sync_request_reload_frames':
+            self._sync_request_reload_frames_handle(msg)
         else:
             return
