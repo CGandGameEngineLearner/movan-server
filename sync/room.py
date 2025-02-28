@@ -16,8 +16,8 @@ class Room:
         self.running = False
     
     
-    def _action_handle(self,msg:dict):
-        self.sync_core.receive_action(msg)
+    def _sync_action_handle(self,msg:dict):
+        self.sync_core.receive_action_msg(msg)
 
     def _enter_room_msg_handle(self,msg:dict):
         uid:str = msg.get('uid')
@@ -68,8 +68,8 @@ class Room:
             self._leave_room_msg_handle(msg)
         elif proto == "room_prepare":
             self._prepare_handle(msg)
-        elif proto == 'sync_actions':
-            self._action_handle(msg)
+        elif proto == 'sync_action':
+            self._sync_action_handle(msg)
         elif proto == 'sync_request_reload_frames':
             self._sync_request_reload_frames_handle(msg)
         else:

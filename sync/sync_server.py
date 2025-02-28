@@ -29,7 +29,7 @@ logger.add(
     level=config['Log']['level'],
 )
 
-1
+
 
 
 
@@ -105,12 +105,7 @@ class SyncServer(SyncServerInterface):
             self.crypto_dict.pop(uid, None)
         user_info_manager.remove_user_info(uid)
     
-    
 
-
-        
-        
-        
             
 
     def msg_handle(self, msg:dict,transport:KCPStreamTransport):
@@ -128,7 +123,10 @@ class SyncServer(SyncServerInterface):
     def send_msg(self, uid: str, proto: str, data: dict):
         with self._safe_operation("send_msg"):
             msg: bytes = utils.encrypt_msg(uid,self.token_dict[uid], proto, data, time.time(), self.crypto_dict[uid])
-            self.transport_dict[uid].write(msg)
+            try:
+                self.transport_dict[uid].write(msg)
+            except Exception as e:
+                logger.warning(e)
     
         
     
@@ -147,20 +145,15 @@ class SyncServer(SyncServerInterface):
             self.transport: KCPStreamTransport = transport
 
         def data_received(self, data:bytes):
-            try:
-                msg = utils.decrypt_msg(
-                    data,
-                    self.sync_server.token_dict,
-                    self.sync_server.crypto_dict
-                )
-                if msg is None:
-                    return
-                self.sync_server.msg_handle(msg,self.transport)
-            except Exception as e:
-                logger.warning(e)
+            
+            msg = utils.decrypt_msg(
+                data,
+                self.sync_server.token_dict,
+                self.sync_server.crypto_dict
+            )
+            if msg is None:
                 return
-    
-    
+            self.sync_server.msg_handle(msg,self.transport)
 
 
         

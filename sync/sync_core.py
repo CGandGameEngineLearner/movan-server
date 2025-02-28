@@ -34,22 +34,22 @@ class SyncCore:
     def stop(self):
         self.running = False
 
-    def receive_action(self, opertation):
+    def receive_action_msg(self, action_msg):
         self.mutex.acquire()
-        self.action_buffer.append(opertation)
+        self.action_buffer.append(action_msg)
         self.mutex.release()
 
     def broadcast_actions(self, frame_count: int, actions: List[dict]):
         for uid in self.user_set:
-            data: dict = {"frame_cout": frame_count, "actions": actions}
-            self.sync_server.send_msg(uid, "sync_actions", data)
+            data: dict = {"frame_count": frame_count, "actions": actions}
+            self.sync_server.send_msg(uid, "sync_frame", data)
 
     def reload_frames(self,uid:int, start_frame:int):
         data = []
         for i in range(start_frame,len(self.frames)):
-            data.append({"frame_cout": i, "actions": self.frames[i]})
+            data.append({"frame_count": i, "actions": self.frames[i]})
 
-        self.sync_server.send_msg(uid,"reload_actions",data)
+        self.sync_server.send_msg(uid,"reload_frames",data)
 
 
     def add_user(self, uid: str):
