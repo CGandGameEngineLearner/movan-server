@@ -50,6 +50,8 @@ class Room:
         except Exception as e:
             logger.warning(e)
 
+        logger.info(f"{uid} request reload frames")
+
         if uid in self.last_request_time_dict and time.time() - self.last_request_time_dict[uid] < 1:
             return
         self.last_request_time_dict[uid] = time.time()
