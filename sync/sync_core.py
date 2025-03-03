@@ -33,6 +33,10 @@ class SyncCore:
 
     def stop(self):
         self.running = False
+        self.frames.clear()
+        self.action_buffer.clear()
+        self.user_set.clear()
+        self.frame_count = 0
 
     def receive_action_msg(self, action_msg):
         self.mutex.acquire()

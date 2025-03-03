@@ -3,7 +3,7 @@ from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
 from config import config
 from loguru import logger
-
+import time
 class Room:
 
     thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
@@ -14,6 +14,7 @@ class Room:
         self.user_set: set = set()
         self.prepare_user_set:set = set()
         self.running = False
+        self.last_request_time_dict:Dict[str:float] = {}
     
     
     def _sync_action_handle(self,msg:dict):
@@ -29,10 +30,13 @@ class Room:
         uid:str = msg.get('uid')
         self.sync_core.user_set.pop(uid)
         self.user_set.pop(uid)
+        if self.user_set == 0:
+            self.stop()
 
     def _prepare_handle(self,msg:dict):
         uid:str = msg.get('uid')
         self.prepare_user_set.add(uid)
+        logger.info(f"{uid} prepare")
 
         # 如果所有人都准备好了 就开始
         if self.running == False and len(self.user_set) == len(self.prepare_user_set):
@@ -45,6 +49,10 @@ class Room:
             uid = msg['uid']
         except Exception as e:
             logger.warning(e)
+
+        if uid in self.last_request_time_dict and time.time() - self.last_request_time_dict[uid] < 1:
+            return
+        self.last_request_time_dict[uid] = time.time()
         self.sync_core.reload_frames(uid,start_frame)
 
     def run(self):

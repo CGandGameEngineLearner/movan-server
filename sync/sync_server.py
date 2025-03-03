@@ -175,7 +175,8 @@ if __name__ == '__main__':
     logger.info("Sync server started")
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
-    sync_server.allocate_user('lifesize','114514',0,crypto_key,crypto_salt)
+    sync_server.allocate_user('lifesize1','114514',0,crypto_key,crypto_salt)
+    sync_server.allocate_user('lifesize2','114514',0,crypto_key,crypto_salt)
     asyncio.run(sync_server.run())
     
     
