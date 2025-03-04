@@ -18,6 +18,7 @@ class Room:
     
     
     def _sync_action_handle(self,msg:dict):
+        logger.debug(f"receive sync action msg:\n{msg}")
         self.sync_core.receive_action_msg(msg)
 
     def _enter_room_msg_handle(self,msg:dict):
@@ -28,10 +29,7 @@ class Room:
 
     def _leave_room_msg_handle(self,msg:dict):
         uid:str = msg.get('uid')
-        self.sync_core.user_set.pop(uid)
-        self.user_set.pop(uid)
-        if self.user_set == 0:
-            self.stop()
+        self.leave_room(uid)
 
     def _prepare_handle(self,msg:dict):
         uid:str = msg.get('uid')
@@ -42,6 +40,12 @@ class Room:
         if self.running == False and len(self.user_set) == len(self.prepare_user_set):
             logger.info("第{self.room_id}号房间开始运行")
             self.run()
+
+    def leave_room(self,uid:str):
+        self.sync_core.user_set.remove(uid)
+        self.user_set.remove(uid)
+        if len(self.user_set) == 0:
+            self.stop()
 
     def _sync_request_reload_frames_handle(self,msg:dict):
         try:

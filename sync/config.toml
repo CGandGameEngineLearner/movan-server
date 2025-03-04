@@ -11,6 +11,7 @@ port = 2025
 
 [Server]
 num_of_rooms = 4
+timeout = 5 # 单位为秒
 
 
 [Log]

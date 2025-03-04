@@ -1,4 +1,4 @@
-from aiokcp import create_server,create_connection, KCPStreamTransport
+from aiokcp import create_server, create_connection, KCPStreamTransport
 from aiokcp.crypto import AES_CBC
 from aiokcp.sync import KCPServer
 from typing import Dict, List, Any, Optional, Union, Tuple
@@ -15,10 +15,8 @@ from config import config
 from user_info_manager import user_info_manager
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import RLock
-from contextlib import contextmanager
-from queue import Queue
-from threading import Thread
+from contextlib import asynccontextmanager
+import asyncio.queues
 
 logger.add(
     sink=config['Log']['sink'],
@@ -31,10 +29,6 @@ logger.add(
     level=config['Log']['level'],
 )
 
-
-
-
-
 @singleton
 class SyncServer(SyncServerInterface):
     def __init__(self, host: str, port: int, num_of_rooms: int, kcp_kwargs=None):
@@ -44,35 +38,29 @@ class SyncServer(SyncServerInterface):
         self.transport_dict: Dict[str, KCPStreamTransport] = {}
         self._room_list: List[Room] = []
         self._max_num_of_rooms = num_of_rooms
-        self._kcp_kwargs:dict = kcp_kwargs
-        self._running:bool = False
+        self._kcp_kwargs: dict = kcp_kwargs
+        self._running: bool = False
 
         for i in range(num_of_rooms):
-            self._room_list.append(Room(i,self))
-
-        
+            self._room_list.append(Room(i, self))
 
         self._kcp_server: Optional[KCPServer] = None
-   
-        self.proto_dict:Dict[str, SyncServer.Protocol] = {}
-        self.token_dict:Dict[str,str] = {}
-        self.crypto_dict:Dict[str,AES_CBC] = {}
-        self._thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
+        self.proto_dict: Dict[str, SyncServer.Protocol] = {}
+        self.token_dict: Dict[str, str] = {}
+        self.crypto_dict: Dict[str, AES_CBC] = {}
+        self._thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
 
-        self._lock = RLock()  # 使用可重入锁
-        self._message_queue = Queue()
-        self._write_thread = Thread(target=self._process_message_queue, daemon=True)
+        self._lock = asyncio.Lock()  # 使用异步锁
+        self._message_queue = asyncio.Queue()  # 使用异步队列
+        self._last_message_time_dict: Dict[str, float] = dict()
+        self._process_task = None  # 消息处理任务
+        self._temp_queue = []  # 用于存储非协程上下文中的消息
         
-        
-        
-    @contextmanager
-    def _safe_operation(self, operation: str):
-        """
-        安全操作的上下文管理器
-        用于确保所有操作都是线程安全的，并提供适当的错误处理
-        """
+    @asynccontextmanager
+    async def _safe_operation(self, operation: str):
+        """异步安全操作的上下文管理器"""
         try:
-            self._lock.acquire()
+            await self._lock.acquire()
             yield
         except Exception as e:
             logger.error(f"Error during {operation}: {e}")
@@ -83,7 +71,6 @@ class SyncServer(SyncServerInterface):
     def __del__(self):
         self._thread_pool.shutdown(wait=True)
 
-
     async def initialize_server(self):
         self._kcp_server = await create_server(
             protocol_factory=self.Protocol,
@@ -92,114 +79,166 @@ class SyncServer(SyncServerInterface):
             kcp_kwargs=self._kcp_kwargs
         )
         self._running = True
-        self._write_thread.start()
+        self._process_task = asyncio.create_task(self._process_message_queue())
         async with self._kcp_server:
             await self._kcp_server.serve_forever()
-    
-        
 
-    def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
-        with self._safe_operation("allocate_user"):
+    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+        async with self._safe_operation("allocate_user"):
             self.token_dict[uid] = token
             crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
             self.crypto_dict[uid] = crypto
-        user_info_manager.set_user_info(uid,{"room_id":room_id})
+        user_info_manager.set_user_info(uid, {"room_id": room_id})
 
-
-    def remove_user(self, uid):
-        with self._safe_operation("remove_user"):
+    async def remove_user(self, uid):
+        async with self._safe_operation("remove_user"):
             user_info_manager.remove_user_info(uid)
-            self.transport_dict.pop(uid, None)
-            self.token_dict.pop(uid, None)
-            self.crypto_dict.pop(uid, None)
-        user_info_manager.remove_user_info(uid)
-    
+            if uid in self.transport_dict:
+                self.transport_dict.pop(uid, None)
 
+            if uid in self.token_dict:
+                self.token_dict.pop(uid, None)
             
+            if uid in self.crypto_dict:
+                self.crypto_dict.pop(uid, None)
+        user_info_manager.remove_user_info(uid)
 
-    def msg_handle(self, msg:dict,transport:KCPStreamTransport):
-        logger.info(msg)
+    async def msg_handle(self, msg: dict, transport: KCPStreamTransport):
         uid = msg['uid']
-
-        with self._safe_operation("update transport"):
+        async with self._safe_operation("update transport"):
             self.transport_dict[uid] = transport
+            self._last_message_time_dict[uid] = time.time()
 
-        uid = msg['uid']
-        room_id:int = user_info_manager.get_user_info(uid)['room_id']
-        self._thread_pool.submit(self._room_list[room_id].msg_handle,msg)
-        
+        room_id: int = user_info_manager.get_user_info(uid)['room_id']
+        # 使用线程池处理房间消息
+        await asyncio.get_event_loop().run_in_executor(
+            self._thread_pool, 
+            self._room_list[room_id].msg_handle, 
+            msg
+        )
+
     def send_msg(self, uid: str, proto: str, data: dict):
         """发送消息的公开接口"""
         try:
-            with self._safe_operation("send_msg"):
-                msg: bytes = utils.encrypt_msg(uid, self.token_dict[uid], proto, data, time.time(), self.crypto_dict[uid])
+            msg: bytes = utils.encrypt_msg(
+                uid, self.token_dict[uid], proto, data, 
+                time.time(), self.crypto_dict[uid]
+            )
             
-            # 将消息放入队列
-            self._message_queue.put((uid, msg))
+            # 检查是否在事件循环中
+            try:
+                loop = asyncio.get_running_loop()
+                # 如果在事件循环中，使用异步方式
+                loop.create_task(self._message_queue.put((uid, msg)))
+            except RuntimeError:
+                # 如果不在事件循环中，使用同步方式
+                if not hasattr(self, '_temp_queue'):
+                    self._temp_queue = []
+                self._temp_queue.append((uid, msg))
+                
         except Exception as e:
             logger.error(f"Error preparing message for {uid}: {e}")
-        
-    def _process_message_queue(self):
-        """处理消息队列的后台线程"""
+
+    async def _process_message_queue(self):
+        """异步处理消息队列"""
         while self._running:
             try:
-                uid, msg = self._message_queue.get()
-                if uid is None:  # 停止信号
-                    break
-                    
+                # 处理临时队列中的消息
+                if hasattr(self, '_temp_queue') and self._temp_queue:
+                    for uid, msg in self._temp_queue:
+                        await self._message_queue.put((uid, msg))
+                    self._temp_queue.clear()
+
                 try:
-                    with self._safe_operation("_process_message_queue"):
-                        transport = self.transport_dict.get(uid)
-                        if transport and transport.is_closing() == False and transport._closed == False: 
-                            transport.write(msg)
-                        else:
-                            # logger.warning(f"No transport found for uid: {uid}")
-                            pass
+                    # 使用 wait_for 添加超时
+                    uid, msg = await asyncio.wait_for(
+                        self._message_queue.get(),
+                        timeout=config['KCP']['update_interval'] / 1000
+                    )
+                except asyncio.TimeoutError:
+                    await self._check_connections()
+                    continue
+
+                if uid is None:  # 停止信号
+                    continue
+
+                await self._send_message(uid, msg)
+                await self._check_connections()
+
+            except Exception as e:
+                logger.error(f"Error in message queue processor: {e}")
+                await asyncio.sleep(0.1)
+
+    async def _send_message(self, uid: str, msg: bytes):
+        """异步处理单个消息的发送"""
+        success:bool = False
+        async with self._safe_operation("send_message"):
+            transport = self.transport_dict.get(uid)
+            
+            if transport and not transport.is_closing():
+                try:
+                    transport.write(msg)
+                    success = True
                 except Exception as e:
                     logger.warning(f"Error sending message to {uid}: {e}")
-                finally:
-                    self._message_queue.task_done()
-            except Exception as e:
-                logger.error(f"Error processing message queue: {e}")
+        if not success:
+            await self._cleanup_user(uid)
 
-            time.sleep(config['KCP']['update_interval'] / 1000)
-    
+    async def _check_connections(self):
+        """异步检查连接状态"""
+        async with self._safe_operation("check_connections"):
+            current_time = time.time()
+            timeout_uids = []
+            
+            for uid, timestamp in list(self._last_message_time_dict.items()):
+                if current_time - timestamp > config['Server']['timeout']:
+                    timeout_uids.append(uid)
+                    
+        for uid in timeout_uids:
+            logger.info(f"Connection timeout for uid: {uid}")
+            await self._cleanup_user(uid)
+
+    async def _cleanup_user(self, uid: str):
+        """异步清理用户资源"""
+        async with self._safe_operation("cleanup_user"):
+            if uid in self.transport_dict:
+                self.transport_dict.pop(uid, None)
+            if uid in self._last_message_time_dict:
+                self._last_message_time_dict.pop(uid, None)
+        room_id: int = user_info_manager.get_user_info(uid)['room_id']
+        if room_id is not None:
+            self._room_list[room_id].leave_room(uid)
+        logger.info(f"Cleaned up resources for {uid}")
+
     async def run(self):
-        await self.initialize_server() 
+        await self.initialize_server()
 
-
-    def shutdown(self):
-        """关闭服务器时清理资源"""
+    async def shutdown(self):
+        """异步关闭服务器"""
         self._running = False
-        # 发送停止信号
-        self._message_queue.put((None, None))
-        # 等待队列处理完成
-        if not self._message_queue.empty():
-            logger.info("Waiting for message queue to empty...")
-            self._message_queue.join()
-        # 等待写线程结束
-        self._write_thread.join(timeout=5.0)
-        if self._write_thread.is_alive():
-            logger.warning("Write thread did not terminate properly")
+        if self._process_task:
+            await self._message_queue.put((None, None))
+            await self._process_task
+        await self._kcp_server.close()
 
     class Protocol(asyncio.Protocol):
         def __init__(self):
             self.sync_server = sync_server
-            self.on_con_lost:asyncio.Future = asyncio.Future()
-            self.uid:Optional[str] = None
+            self.on_con_lost: asyncio.Future = asyncio.Future()
+            self.uid: Optional[str] = None
 
         def connection_made(self, transport):
             peername = transport.get_extra_info('peername')
-            logger.info('Connection from {}'.format(peername))
+            logger.info(f'Connection from {peername}')
             self.transport: KCPStreamTransport = transport
 
         def connection_lost(self, exc):
             logger.info(f'uid: {self.uid} Connection lost')
             self.on_con_lost.set_result(True)
-            self.sync_server.transport_dict.pop(self.uid)
+            if self.uid:
+                asyncio.create_task(self.sync_server._cleanup_user(self.uid))
 
-        def data_received(self, data:bytes):
-            
+        def data_received(self, data: bytes):
             msg = utils.decrypt_msg(
                 data,
                 self.sync_server.token_dict,
@@ -208,15 +247,13 @@ class SyncServer(SyncServerInterface):
             if msg is None:
                 return
             self.uid = msg['uid']
-            self.sync_server.msg_handle(msg,self.transport)
+            asyncio.create_task(self.sync_server.msg_handle(msg, self.transport))
 
-
-        
 kcp_kwargs = {
-    'no_delay'              : config['KCP']['no_delay'],
-    'update_interval'       : config['KCP']['update_interval'],
-    'resend_count'          : config['KCP']['resend_count'],
-    'no_congestion_control' : config['KCP']['no_congestion_control']
+    'no_delay': config['KCP']['no_delay'],
+    'update_interval': config['KCP']['update_interval'],
+    'resend_count': config['KCP']['resend_count'],
+    'no_congestion_control': config['KCP']['no_congestion_control']
 }
 
 sync_server = SyncServer(
@@ -230,10 +267,8 @@ if __name__ == '__main__':
     logger.info("Sync server started")
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
-    sync_server.allocate_user('lifesize1','114514',0,crypto_key,crypto_salt)
-    sync_server.allocate_user('lifesize2','114514',0,crypto_key,crypto_salt)
+    asyncio.run(sync_server.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt))
+    asyncio.run(sync_server.allocate_user('lifesize1', '114514', 0, crypto_key, crypto_salt))
+    asyncio.run(sync_server.allocate_user('lifesize2', '114514', 0, crypto_key, crypto_salt))
+    asyncio.run(sync_server.allocate_user('lifesize3', '114514', 0, crypto_key, crypto_salt))
     asyncio.run(sync_server.run())
-    
-    
-
-    
