@@ -1,0 +1,3 @@
+[submodule "movan_protobuf"]
+	path = movan_protobuf
+	url = https://github.com/CGandGameEngineLearner/movan_protobuf.git
