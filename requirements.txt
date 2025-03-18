@@ -2,12 +2,15 @@ aiokcp==0.0.4
 cffi==1.17.1
 colorama==0.4.6
 cryptography==44.0.0
-Cython==3.0.11
 grpcio==1.71.0
+grpcio-reflection==1.71.0
+grpcio-tools==1.71.0
 loguru==0.7.3
 msgpack==1.1.0
+mypy-protobuf==3.6.0
+protobuf==5.29.3
 pycparser==2.22
 setuptools==75.8.1
 toml==0.10.2
+types-protobuf==5.29.1.20250315
 win32_setctime==1.2.0
-grpcio-reflection == 1.71.0

@@ -110,6 +110,7 @@ class SyncServer(SyncServerInterface):
 
 
     async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+        logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):
             self.token_dict[uid] = token
             crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
