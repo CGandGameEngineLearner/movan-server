@@ -18,6 +18,12 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 import asyncio.queues
 
+from sync_server_rpc_servicer import SyncServerRpcServicer
+import grpc.aio
+import proto
+
+from grpc_reflection.v1alpha import reflection
+
 logger.add(
     sink=config['Log']['sink'],
     rotation=config['Log']['rotation'],
@@ -53,8 +59,10 @@ class SyncServer(SyncServerInterface):
         self._lock = asyncio.Lock()  # 使用异步锁
         self._message_queue = asyncio.Queue()  # 使用异步队列
         self._last_message_time_dict: Dict[str, float] = dict()
-        self._process_task = None  # 消息处理任务
+        self._process_message_task = None  # 消息处理任务
+        self._process_rpc_task = None  # RPC 服务任务
         self._temp_queue = []  # 用于存储非协程上下文中的消息
+        self._rpc_server: Optional[grpc.aio.Server] = None
         
     @asynccontextmanager
     async def _safe_operation(self, operation: str):
@@ -79,9 +87,27 @@ class SyncServer(SyncServerInterface):
             kcp_kwargs=self._kcp_kwargs
         )
         self._running = True
-        self._process_task = asyncio.create_task(self._process_message_queue())
+        self._process_message_task = asyncio.create_task(self._process_message_queue())
+        self._process_rpc_task = asyncio.create_task(self._process_rpc_server())
         async with self._kcp_server:
             await self._kcp_server.serve_forever()
+
+    async def _process_rpc_server(self):
+        self._rpc_server = grpc.aio.server()
+        proto.server_pb2_grpc.add_SyncServerServicer_to_server(
+            SyncServerRpcServicer(self),
+            self._rpc_server
+            )
+        SERVICE_NAMES = (
+            proto.server_pb2.DESCRIPTOR.services_by_name["SyncServerServicer"].full_name,
+            reflection.SERVICE_NAME,
+        )
+        reflection.enable_server_reflection(SERVICE_NAMES, self._rpc_server)
+        self._rpc_server.add_insecure_port("[::]:" + str(config['Server']['rpc_port']))
+        await self._rpc_server.start()
+        await self._rpc_server.wait_for_termination()
+
+
 
     async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
         async with self._safe_operation("allocate_user"):
@@ -91,6 +117,7 @@ class SyncServer(SyncServerInterface):
         user_info_manager.set_user_info(uid, {"room_id": room_id})
 
     async def remove_user(self, uid):
+        self._cleanup_user(uid)
         async with self._safe_operation("remove_user"):
             user_info_manager.remove_user_info(uid)
             if uid in self.transport_dict:
@@ -216,9 +243,9 @@ class SyncServer(SyncServerInterface):
     async def shutdown(self):
         """异步关闭服务器"""
         self._running = False
-        if self._process_task:
+        if self._process_message_task:
             await self._message_queue.put((None, None))
-            await self._process_task
+            await self._process_message_task
         await self._kcp_server.close()
 
     class Protocol(asyncio.Protocol):

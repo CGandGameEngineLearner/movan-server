@@ -10,3 +10,4 @@ pycparser==2.22
 setuptools==75.8.1
 toml==0.10.2
 win32_setctime==1.2.0
+grpcio-reflection == 1.71.0

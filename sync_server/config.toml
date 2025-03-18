@@ -12,6 +12,7 @@ port = 2025
 [Server]
 num_of_rooms = 4
 timeout = 5 # 单位为秒
+rpc_port = 50051 # rpc服务的端口号
 
 
 [Log]
