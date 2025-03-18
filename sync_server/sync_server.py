@@ -103,7 +103,7 @@ class SyncServer(SyncServerInterface):
             reflection.SERVICE_NAME,
         )
         reflection.enable_server_reflection(SERVICE_NAMES, self._rpc_server)
-        self._rpc_server.add_insecure_port("[::]:" + str(config['Server']['rpc_port']))
+        self._rpc_server.add_insecure_port(config['Network']['rpc_host'] + str(config['Network']['rpc_port']))
         await self._rpc_server.start()
         await self._rpc_server.wait_for_termination()
 
@@ -131,6 +131,7 @@ class SyncServer(SyncServerInterface):
         user_info_manager.remove_user_info(uid)
 
     async def msg_handle(self, msg: dict, transport: KCPStreamTransport):
+        # logger.debug(msg)
         uid = msg['uid']
         async with self._safe_operation("update transport"):
             self.transport_dict[uid] = transport
@@ -284,8 +285,8 @@ kcp_kwargs = {
 }
 
 sync_server = SyncServer(
-    config['Network']['host'],
-    config['Network']['port'],
+    config['Network']['sync_host'],
+    config['Network']['sync_port'],
     config['Server']['num_of_rooms'],
     kcp_kwargs
 )

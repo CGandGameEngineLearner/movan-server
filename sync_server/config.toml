@@ -5,14 +5,15 @@ resend_count = 2
 no_congestion_control = true
 
 [Network]
-host = "127.0.0.1"
-port = 2025
-
+sync_host = "0.0.0.0"
+sync_port = 2025
+rpc_host = "0.0.0.0"
+rpc_port = 50051 # rpc服务的端口号
 
 [Server]
 num_of_rooms = 4
 timeout = 5 # 单位为秒
-rpc_port = 50051 # rpc服务的端口号
+
 
 
 [Log]
