@@ -2,7 +2,6 @@ aiokcp==0.0.4
 cffi==1.17.1
 colorama==0.4.6
 cryptography==44.0.0
-Cython==3.0.11
 grpcio==1.71.0
 grpcio-reflection==1.71.0
 grpcio-tools==1.71.0
