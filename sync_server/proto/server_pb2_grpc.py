@@ -139,32 +139,3 @@ class SyncServer(object):
             timeout,
             metadata,
             _registered_method=True)
-
-
-class AccountServerStub(object):
-    """Missing associated documentation comment in .proto file."""
-
-    def __init__(self, channel):
-        """Constructor.
-
-        Args:
-            channel: A grpc.Channel.
-        """
-
-
-class AccountServerServicer(object):
-    """Missing associated documentation comment in .proto file."""
-
-
-def add_AccountServerServicer_to_server(servicer, server):
-    rpc_method_handlers = {
-    }
-    generic_handler = grpc.method_handlers_generic_handler(
-            'MovanServer.AccountServer', rpc_method_handlers)
-    server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('MovanServer.AccountServer', rpc_method_handlers)
-
-
- # This class is part of an EXPERIMENTAL API.
-class AccountServer(object):
-    """Missing associated documentation comment in .proto file."""

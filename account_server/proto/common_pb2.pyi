@@ -29,7 +29,7 @@ class BoolResponse(google.protobuf.message.Message):
 global___BoolResponse = BoolResponse
 
 @typing.final
-class AccountRegister(google.protobuf.message.Message):
+class AccountRegisterRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     ACCOUNT_FIELD_NUMBER: builtins.int
@@ -44,10 +44,10 @@ class AccountRegister(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing.Literal["account", b"account", "password", b"password"]) -> None: ...
 
-global___AccountRegister = AccountRegister
+global___AccountRegisterRequest = AccountRegisterRequest
 
 @typing.final
-class AccountLogin(google.protobuf.message.Message):
+class AccountLoginRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     ACCOUNT_FIELD_NUMBER: builtins.int
@@ -62,4 +62,4 @@ class AccountLogin(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing.Literal["account", b"account", "password", b"password"]) -> None: ...
 
-global___AccountLogin = AccountLogin
+global___AccountLoginRequest = AccountLoginRequest

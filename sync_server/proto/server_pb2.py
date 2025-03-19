@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 import common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x12\x0bMovanServer\x1a\x0c\x63ommon.proto\"k\n\x13\x41llocateUserRequest\x12\x0b\n\x03uid\x18\x01 \x01(\t\x12\r\n\x05token\x18\x02 \x01(\t\x12\x0f\n\x07room_id\x18\x03 \x01(\x05\x12\x12\n\ncrypto_key\x18\x04 \x01(\x0c\x12\x13\n\x0b\x63rypto_salt\x18\x05 \x01(\x0c\" \n\x11RemoveUserRequest\x12\x0b\n\x03uid\x18\x01 \x01(\t2\x90\x01\n\nSyncServer\x12\x42\n\rallocate_user\x12 .MovanServer.AllocateUserRequest\x1a\r.BoolResponse\"\x00\x12>\n\x0bremove_user\x12\x1e.MovanServer.RemoveUserRequest\x1a\r.BoolResponse\"\x00\x32\x0f\n\rAccountServerb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\x12\x0bMovanServer\x1a\x0c\x63ommon.proto\"k\n\x13\x41llocateUserRequest\x12\x0b\n\x03uid\x18\x01 \x01(\t\x12\r\n\x05token\x18\x02 \x01(\t\x12\x0f\n\x07room_id\x18\x03 \x01(\x05\x12\x12\n\ncrypto_key\x18\x04 \x01(\x0c\x12\x13\n\x0b\x63rypto_salt\x18\x05 \x01(\x0c\" \n\x11RemoveUserRequest\x12\x0b\n\x03uid\x18\x01 \x01(\t2\x90\x01\n\nSyncServer\x12\x42\n\rallocate_user\x12 .MovanServer.AllocateUserRequest\x1a\r.BoolResponse\"\x00\x12>\n\x0bremove_user\x12\x1e.MovanServer.RemoveUserRequest\x1a\r.BoolResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,6 +38,4 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_REMOVEUSERREQUEST']._serialized_end=184
   _globals['_SYNCSERVER']._serialized_start=187
   _globals['_SYNCSERVER']._serialized_end=331
-  _globals['_ACCOUNTSERVER']._serialized_start=333
-  _globals['_ACCOUNTSERVER']._serialized_end=348
 # @@protoc_insertion_point(module_scope)

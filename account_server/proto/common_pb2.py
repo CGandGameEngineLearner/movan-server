@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x63ommon.proto\"6\n\x0c\x42oolResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\"4\n\x0f\x41\x63\x63ountRegister\x12\x0f\n\x07\x61\x63\x63ount\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\"1\n\x0c\x41\x63\x63ountLogin\x12\x0f\n\x07\x61\x63\x63ount\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x63ommon.proto\"6\n\x0c\x42oolResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\";\n\x16\x41\x63\x63ountRegisterRequest\x12\x0f\n\x07\x61\x63\x63ount\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\"8\n\x13\x41\x63\x63ountLoginRequest\x12\x0f\n\x07\x61\x63\x63ount\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\tb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,8 +33,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_BOOLRESPONSE']._serialized_start=16
   _globals['_BOOLRESPONSE']._serialized_end=70
-  _globals['_ACCOUNTREGISTER']._serialized_start=72
-  _globals['_ACCOUNTREGISTER']._serialized_end=124
-  _globals['_ACCOUNTLOGIN']._serialized_start=126
-  _globals['_ACCOUNTLOGIN']._serialized_end=175
+  _globals['_ACCOUNTREGISTERREQUEST']._serialized_start=72
+  _globals['_ACCOUNTREGISTERREQUEST']._serialized_end=131
+  _globals['_ACCOUNTLOGINREQUEST']._serialized_start=133
+  _globals['_ACCOUNTLOGINREQUEST']._serialized_end=189
 # @@protoc_insertion_point(module_scope)
