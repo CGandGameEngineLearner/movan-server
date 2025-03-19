@@ -4,11 +4,11 @@ from aiokcp import KCPStreamTransport
 class SyncServerInterface(ABC):
 
     @abstractmethod
-    def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
         pass
 
     @abstractmethod
-    def remove_user(self, uid):
+    async def remove_user(self, uid):
         pass
 
     @abstractmethod

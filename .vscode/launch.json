@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python 调试程序: account_server sync_server_rpc.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\account_server\\rpc\\sync_server_rpc.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "Python 调试程序: account_server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\account_server\\account_server.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
             "name": "Python 调试程序: sync_server",
             "type": "debugpy",
             "request": "launch",
@@ -19,6 +35,16 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Python: account_server sync_server 联调",
+            "configurations": ["Python 调试程序: account_server", "Python 调试程序: sync_server"]
+        },
+        {
+            "name": "Python: account_server sync_server rpc 联调",
+            "configurations": ["Python 调试程序: account_server sync_server_rpc.py", "Python 调试程序: sync_server"]
         }
     ]
 }

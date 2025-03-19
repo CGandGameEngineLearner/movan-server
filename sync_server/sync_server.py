@@ -93,22 +93,27 @@ class SyncServer(SyncServerInterface):
             await self._kcp_server.serve_forever()
 
     async def _process_rpc_server(self):
+        # 异步 gRPC 服务器
         self._rpc_server = grpc.aio.server()
         proto.server_pb2_grpc.add_SyncServerServicer_to_server(
             SyncServerRpcServicer(self),
             self._rpc_server
-            )
-        SERVICE_NAMES = (
-            proto.server_pb2.DESCRIPTOR.services_by_name["SyncServerServicer"].full_name,
+        )
+        self._rpc_server.add_insecure_port(f"{config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
+        
+        # 添加 gRPC 反射服务
+        service_names = (
+            proto.server_pb2.DESCRIPTOR.services_by_name['SyncServer'].full_name,
             reflection.SERVICE_NAME,
         )
-        reflection.enable_server_reflection(SERVICE_NAMES, self._rpc_server)
-        self._rpc_server.add_insecure_port(config['Network']['rpc_host'] + str(config['Network']['rpc_port']))
+        reflection.enable_server_reflection(service_names, self._rpc_server)
+        
+        logger.info(f"启动 gRPC 服务器在 {config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
         await self._rpc_server.start()
         await self._rpc_server.wait_for_termination()
 
 
-
+    
     async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
         logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):

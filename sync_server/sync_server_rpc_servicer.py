@@ -2,6 +2,7 @@ import grpc
 
 import proto
 from sync_server_interface import SyncServerInterface
+from loguru import logger
 
 class SyncServerRpcServicer(proto.server_pb2_grpc.SyncServerServicer):
     def __init__(self,sync_server:SyncServerInterface):
@@ -15,20 +16,27 @@ class SyncServerRpcServicer(proto.server_pb2_grpc.SyncServerServicer):
             room_id = request.room_id
             crypto_key = request.crypto_key
             crypto_salt = request.crypto_salt
-            await self.sync_server.allocate_user(uid,token,room_id,crypto_key,crypto_salt)
-            return proto.common_pb2.BoolResponse(True,"")
+            await self.sync_server.allocate_user(
+                            uid=uid,
+                            token=token,
+                            room_id=room_id,
+                            crypto_key=crypto_key,
+                            crypto_salt=crypto_salt
+                        )
+            return proto.common_pb2.BoolResponse(success=True,error_message="")
         except Exception as e:
-            return proto.common_pb2.BoolResponse(False,str(e))
+            logger.warning(str(e))
+            return proto.common_pb2.BoolResponse(success=False,error_message=str(e))
         
 
     async def remove_user(self, request:proto.server_pb2.RemoveUserRequest, context):
         try:
             uid = request.uid
             await self.sync_server.remove_user(uid)
-            return proto.common_pb2.BoolResponse(True,"")
+            return proto.common_pb2.BoolResponse(success=True,error_message="")
         
         except Exception as e:
-            return proto.common_pb2.BoolResponse(False,str(e))
+            return proto.common_pb2.BoolResponse(success=False,error_message=str(e))
 
 
 
