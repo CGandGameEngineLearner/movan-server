@@ -1,0 +1,18 @@
+[Network]
+account_server_host = "0.0.0.0"
+account_server_port = 2027
+
+
+[SyncServer]
+urls = ["127.0.0.1:50051"] # 对应下标为对应SyncServer编号
+
+
+[Log]
+sink="account_server.log"
+rotation="500 MB"  # 当日志文件达到500MB时轮转
+retention="10 days"  # 保留10天的日志
+compression="zip"  # 使用zip压缩轮转后的日志
+enqueue=true  # 启用异步写入
+backtrace=true  # 记录异常的完整堆栈跟踪
+diagnose=true  # 允许诊断异常
+level="INFO"  # 设置日志级别
