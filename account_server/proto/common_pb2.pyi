@@ -63,3 +63,24 @@ class AccountLoginRequest(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["account", b"account", "password", b"password"]) -> None: ...
 
 global___AccountLoginRequest = AccountLoginRequest
+
+@typing.final
+class AccountLoginResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCESS_FIELD_NUMBER: builtins.int
+    TOKEN_FIELD_NUMBER: builtins.int
+    ERROR_MESSAGE_FIELD_NUMBER: builtins.int
+    success: builtins.bool
+    token: builtins.str
+    error_message: builtins.str
+    def __init__(
+        self,
+        *,
+        success: builtins.bool = ...,
+        token: builtins.str = ...,
+        error_message: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["error_message", b"error_message", "success", b"success", "token", b"token"]) -> None: ...
+
+global___AccountLoginResponse = AccountLoginResponse

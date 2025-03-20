@@ -1,9 +1,15 @@
 import base
+import user
+
+__all__ = [
+    "user"
+]
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session,Session
 from account_server.config import config
 
-from account_server.entity.base import Base
+from account_server.database.base import Base
 
 from contextlib import contextmanager
 
@@ -16,8 +22,7 @@ engine = create_engine(
     pool_recycle=3600,  # 连接回收时间(秒)
 )
 
-# 导入所有的实体
-import user
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,19 +38,17 @@ db_session = scoped_session(SessionLocal)
 
 
 
-def get_db():
-    """获取数据库会话"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @contextmanager
 def get_db_context():
-    db = get_db().__next__()
+    session:Session = db_session()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        db_session.remove()
+
+
+if __name__ == "__main__":
+    with get_db_context() as session:
+        session.add(user.User(id="test_user4",password="1"))
+        session.commit()

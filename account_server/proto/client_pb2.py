@@ -22,13 +22,16 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+import common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x63lient.proto\x12\x0bMovanClientb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x63lient.proto\x12\x0bMovanClient\x1a\x0c\x63ommon.proto2\x8d\x01\n\rAccountServer\x12<\n\x10\x61\x63\x63ount_register\x12\x17.AccountRegisterRequest\x1a\r.BoolResponse\"\x00\x12>\n\raccount_login\x12\x14.AccountLoginRequest\x1a\x15.AccountLoginResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'client_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
+  _globals['_ACCOUNTSERVER']._serialized_start=44
+  _globals['_ACCOUNTSERVER']._serialized_end=185
 # @@protoc_insertion_point(module_scope)

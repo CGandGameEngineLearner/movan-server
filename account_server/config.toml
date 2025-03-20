@@ -19,3 +19,11 @@ level="INFO"  # 设置日志级别
 
 [DataBase]
 url="mysql+pymysql://root:8868384asdf@localhost/movan_server" # 数据库url和密码请自己替换 这里只是示例
+
+
+[Security]
+jwt_secret = "your-secret-key" # JWT 密钥
+excluded_methods = [
+    "/MovanClient.AccountServer/account_register",
+    "/MovanClient.AccountServer/account_login",
+]  # 不需要认证的方法列表
