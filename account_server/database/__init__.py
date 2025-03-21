@@ -1,3 +1,11 @@
+
+
+import os
+import sys
+
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import base
 import user
 
@@ -7,9 +15,9 @@ __all__ = [
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session,Session
-from account_server.config import config
+from config import config
 
-from account_server.database.base import Base
+from database.base import Base
 
 from contextlib import contextmanager
 

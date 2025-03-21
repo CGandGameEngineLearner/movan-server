@@ -22,7 +22,7 @@ url="mysql+pymysql://root:8868384asdf@localhost/movan_server" # 数据库url和�
 
 
 [Security]
-jwt_secret = "your-secret-key" # JWT 密钥
+jwt_secret = "your-secret-key" # JWT 密钥 最好隔一段时间更新一次
 excluded_methods = [
     "/MovanClient.AccountServer/account_register",
     "/MovanClient.AccountServer/account_login",

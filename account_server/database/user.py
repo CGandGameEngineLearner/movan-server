@@ -1,7 +1,7 @@
 from sqlalchemy import Sequence, Column, Integer, String, case
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from account_server.database.base import Base
+from database.base import Base
 from sqlalchemy.orm import Mapped
 import bcrypt
 
@@ -10,7 +10,7 @@ class User(Base):
     
     id: Mapped[str] = Column(String(36), primary_key=True)
     _password: Mapped[str] = Column('password', String(128))
-    _name: Mapped[str] = Column('name', String(50), nullable=False)
+    _name: Mapped[str] = Column('name', String(50), nullable=True)
 
     def __init__(self, **kwargs):
         password = kwargs.pop('password', None)
