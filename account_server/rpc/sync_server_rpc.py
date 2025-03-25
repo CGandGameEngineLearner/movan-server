@@ -1,7 +1,7 @@
 import grpc
 from account_server.config import config
 from account_server import proto
-from loguru import logger
+from logger import logger
 
 from typing import Dict
 

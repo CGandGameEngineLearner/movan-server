@@ -1,8 +1,8 @@
-from base.singleton import singleton
+from common.singleton import singleton
 from typing import Dict, Optional
 from threading import RLock
 from contextlib import contextmanager
-from loguru import logger
+from logger import logger
 
 @singleton
 class UserInfoManager:

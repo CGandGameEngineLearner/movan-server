@@ -1,7 +1,7 @@
-from asyncio import create_server, create_connection
+import asyncio
 from asyncio import Transport
-from aiokcp.crypto import AES_CBC
-from aiokcp.sync import KCPServer
+from utils import Crypto
+
 from typing import Dict, List, Any, Optional, Union, Tuple
 from room import Room
 import asyncio
@@ -11,7 +11,7 @@ import asyncio
 import utils
 import time
 from sync_server_interface import SyncServerInterface
-from base.singleton import singleton
+from common.singleton import singleton
 from config import config
 
 from user_info_manager import user_info_manager
@@ -45,7 +45,7 @@ class SyncServer(SyncServerInterface):
         self._kcp_server: Optional[asyncio.Server] = None
         self.proto_dict: Dict[str, SyncServer.Protocol] = {}
         self.token_dict: Dict[str, str] = {}
-        self.crypto_dict: Dict[str, AES_CBC] = {}
+        self.crypto_dict: Dict[str, Crypto] = {}
         self._thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
 
         self._lock = asyncio.Lock()  # 使用异步锁
@@ -54,7 +54,7 @@ class SyncServer(SyncServerInterface):
         self._process_message_task = None  # 消息处理任务
         self._process_rpc_task = None  # RPC 服务任务
         self._temp_queue = []  # 用于存储非协程上下文中的消息
-        self._rpc_server: Optional[grpc.aio.Server] = None
+        # self._rpc_server: Optional[grpc.aio.Server] = None
         
     @asynccontextmanager
     async def _safe_operation(self, operation: str):
@@ -112,7 +112,7 @@ class SyncServer(SyncServerInterface):
         logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):
             self.token_dict[uid] = token
-            crypto: AES_CBC = AES_CBC(crypto_key, crypto_salt)
+            crypto: Crypto = Crypto(crypto_key, crypto_salt)
             self.crypto_dict[uid] = crypto
         user_info_manager.set_user_info(uid, {"room_id": room_id})
 

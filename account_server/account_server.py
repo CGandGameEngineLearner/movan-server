@@ -2,7 +2,7 @@ import asyncio
 import grpc
 from grpc import Server
 from grpc_reflection.v1alpha import reflection
-from base.singleton import singleton
+from common.singleton import singleton
 # 修改这行，使用完全限定导入
 from proto import client_pb2, client_pb2_grpc
 

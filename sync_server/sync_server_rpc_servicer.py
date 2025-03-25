@@ -1,10 +1,9 @@
-import grpc
 
 import proto
 from sync_server_interface import SyncServerInterface
-from loguru import logger
+from logger import logger
 
-class SyncServerRpcServicer(proto.server_pb2_grpc.SyncServerServicer):
+class SyncServerRpcServicer():
     def __init__(self,sync_server:SyncServerInterface):
         self.sync_server = sync_server
         

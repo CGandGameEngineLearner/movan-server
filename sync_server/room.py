@@ -2,7 +2,7 @@ from sync_core import SyncCore
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
 from config import config
-from loguru import logger
+from logger import logger
 import time
 class Room:
 

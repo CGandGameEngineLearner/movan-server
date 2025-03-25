@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from aiokcp import KCPStreamTransport
+import asyncio
 
 class SyncServerInterface(ABC):
 
@@ -12,7 +12,7 @@ class SyncServerInterface(ABC):
         pass
 
     @abstractmethod
-    def msg_handle(self,msg:dict,transport:KCPStreamTransport):
+    def msg_handle(self,msg:dict,transport:asyncio.Transport):
         pass
 
     @abstractmethod

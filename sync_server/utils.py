@@ -6,14 +6,16 @@ import struct
 from logger import logger
 
 from proto.encrypted_message_pb2 import EncryptedMessage, ExtraData, DecryptedMessage
+from google.protobuf.json_format import MessageToDict
 
 
 
 
 class Crypto:
     """简单异或加密类，替代 AES_CBC"""
-    def __init__(self, key: bytes):
+    def __init__(self, key: bytes,salt: bytes):
         self.key = key
+        self.salt = salt
     
     def encrypt(self, data: bytes) -> bytes:
         """使用异或加密数据"""
@@ -27,7 +29,8 @@ class Crypto:
     def _xor_process(self, data: bytes) -> bytes:
         """执行异或操作，将数据与密钥按字节异或"""
         key_len = len(self.key)
-        return bytes([data[i] ^ self.key[i % key_len] for i in range(len(data))])
+        salt_len = len(self.salt)
+        return bytes([data[i] ^ self.salt[i % salt_len] ^ self.key[i % key_len] for i in range(len(data))])
 
 
 def _serialize_data(data: Any) -> bytes:
@@ -161,10 +164,10 @@ def decrypt_msg(data: bytes, token_dict: Dict[str, str], crypto_dict: Dict[str, 
                 logger.warning(f"Invalid token for UID: {uid}")
                 return None
             
-            # # 转换extra_data为字典，并移除token
-            # extra_data_dict = MessageToDict(extra_data)
-            # if "token" in extra_data_dict:
-            #     extra_data_dict.pop("token")
+            # 转换extra_data为字典，并移除token
+            extra_data_dict = MessageToDict(extra_data)
+            if "token" in extra_data_dict:
+                extra_data_dict.pop("token")
             
             return {
                 "uid": uid, 
@@ -182,7 +185,8 @@ def decrypt_msg(data: bytes, token_dict: Dict[str, str], crypto_dict: Dict[str, 
 if __name__ == '__main__':
     # 测试
     crypto_key = b'12345678901234567890123456789012'
-    crypto = Crypto(crypto_key)
+    crypto_salt = b'12345678901234567890123456789012'
+    crypto = Crypto(crypto_key,crypto_salt)
     crypto_dict = {'1234567890': crypto}
     token_dict = {'1234567890': 'token'}
     
