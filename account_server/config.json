@@ -19,7 +19,8 @@
     "level": "INFO"
   },
   "DataBase": {
-    "url": "mysql+pymysql://root:8868384asdf@localhost/movan_server"
+    "type": "sqlite",
+    "file": "user.db"
   },
   "Security": {
     "jwt_secret": "your-secret-key",

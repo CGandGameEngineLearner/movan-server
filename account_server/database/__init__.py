@@ -1,62 +1,29 @@
-
-
 import os
 import sys
-
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import common
-import user
+from . import user
 
 __all__ = [
     "user"
 ]
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session,Session
-from config import config
-
-from database.base import Base
-
 from contextlib import contextmanager
-
-
-# 创建引擎
-engine = create_engine(
-    config['DataBase']['url'],
-    echo=False,  # 设置为True可以看到SQL语句
-    pool_pre_ping=True,  # 连接池健康检查
-    pool_recycle=3600,  # 连接回收时间(秒)
-)
-
-
-
-Base.metadata.create_all(bind=engine)
-
-# 创建会话工厂
-SessionLocal = sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
-    bind=engine
-)
-
-# 创建线程安全的会话工厂
-db_session = scoped_session(SessionLocal)
-
-
-
+from database.base import get_connection
 
 @contextmanager
 def get_db_context():
-    session:Session = db_session()
+    """提供一个数据库连接的上下文管理器"""
+    conn = get_connection()
     try:
-        yield session
+        yield conn
     finally:
-        db_session.remove()
+        conn.close()
 
 
 if __name__ == "__main__":
-    with get_db_context() as session:
-        session.add(user.User(id="test_user4",password="1"))
-        session.commit()
+    # 测试用例
+    test_user = user.User(id="test_user4", password="1")
+    test_user.save()
