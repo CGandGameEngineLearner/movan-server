@@ -1,11 +1,13 @@
-from aiokcp import create_server, create_connection, KCPStreamTransport
+from asyncio import create_server, create_connection
+from asyncio import Transport
 from aiokcp.crypto import AES_CBC
 from aiokcp.sync import KCPServer
 from typing import Dict, List, Any, Optional, Union, Tuple
 from room import Room
 import asyncio
 
-from loguru import logger
+
+
 import utils
 import time
 from sync_server_interface import SyncServerInterface
@@ -19,21 +21,11 @@ from contextlib import asynccontextmanager
 import asyncio.queues
 
 from sync_server_rpc_servicer import SyncServerRpcServicer
-import grpc.aio
+
 import proto
 
-from grpc_reflection.v1alpha import reflection
+from logger import logger
 
-logger.add(
-    sink=config['Log']['sink'],
-    rotation=config['Log']['rotation'],
-    retention=config['Log']['retention'],
-    compression=config['Log']['compression'],
-    enqueue=config['Log']['enqueue'],
-    backtrace=config['Log']['backtrace'],
-    diagnose=config['Log']['diagnose'],
-    level=config['Log']['level'],
-)
 
 @singleton
 class SyncServer(SyncServerInterface):
@@ -41,7 +33,7 @@ class SyncServer(SyncServerInterface):
         self._host = host
         self._port = port
         
-        self.transport_dict: Dict[str, KCPStreamTransport] = {}
+        self.transport_dict: Dict[str, Transport] = {}
         self._room_list: List[Room] = []
         self._max_num_of_rooms = num_of_rooms
         self._kcp_kwargs: dict = kcp_kwargs
@@ -50,7 +42,7 @@ class SyncServer(SyncServerInterface):
         for i in range(num_of_rooms):
             self._room_list.append(Room(i, self))
 
-        self._kcp_server: Optional[KCPServer] = None
+        self._kcp_server: Optional[asyncio.Server] = None
         self.proto_dict: Dict[str, SyncServer.Protocol] = {}
         self.token_dict: Dict[str, str] = {}
         self.crypto_dict: Dict[str, AES_CBC] = {}
@@ -80,11 +72,12 @@ class SyncServer(SyncServerInterface):
         self._thread_pool.shutdown(wait=True)
 
     async def initialize_server(self):
-        self._kcp_server = await create_server(
-            protocol_factory=self.Protocol,
+        loop = asyncio.get_running_loop()
+
+        self._kcp_server = await loop.create_server(
+            lambda: self.Protocol(self),
             host=self._host,
             port=self._port,
-            kcp_kwargs=self._kcp_kwargs
         )
         self._running = True
         self._process_message_task = asyncio.create_task(self._process_message_queue())
@@ -93,24 +86,25 @@ class SyncServer(SyncServerInterface):
             await self._kcp_server.serve_forever()
 
     async def _process_rpc_server(self):
-        # 异步 gRPC 服务器
-        self._rpc_server = grpc.aio.server()
-        proto.server_pb2_grpc.add_SyncServerServicer_to_server(
-            SyncServerRpcServicer(self),
-            self._rpc_server
-        )
-        self._rpc_server.add_insecure_port(f"{config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
+        pass
+        # # 异步 gRPC 服务器
+        # self._rpc_server = grpc.aio.server()
+        # proto.server_pb2_grpc.add_SyncServerServicer_to_server(
+        #     SyncServerRpcServicer(self),
+        #     self._rpc_server
+        # )
+        # self._rpc_server.add_insecure_port(f"{config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
         
-        # 添加 gRPC 反射服务
-        service_names = (
-            proto.server_pb2.DESCRIPTOR.services_by_name['SyncServer'].full_name,
-            reflection.SERVICE_NAME,
-        )
-        reflection.enable_server_reflection(service_names, self._rpc_server)
+        # # 添加 gRPC 反射服务
+        # service_names = (
+        #     proto.server_pb2.DESCRIPTOR.services_by_name['SyncServer'].full_name,
+        #     reflection.SERVICE_NAME,
+        # )
+        # reflection.enable_server_reflection(service_names, self._rpc_server)
         
-        logger.info(f"启动 gRPC 服务器在 {config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
-        await self._rpc_server.start()
-        await self._rpc_server.wait_for_termination()
+        # logger.info(f"启动 gRPC 服务器在 {config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
+        # await self._rpc_server.start()
+        # await self._rpc_server.wait_for_termination()
 
 
     
@@ -136,7 +130,7 @@ class SyncServer(SyncServerInterface):
                 self.crypto_dict.pop(uid, None)
         user_info_manager.remove_user_info(uid)
 
-    async def msg_handle(self, msg: dict, transport: KCPStreamTransport):
+    async def msg_handle(self, msg: dict, transport: Transport):
         # logger.debug(msg)
         uid = msg['uid']
         async with self._safe_operation("update transport"):
@@ -264,7 +258,7 @@ class SyncServer(SyncServerInterface):
         def connection_made(self, transport):
             peername = transport.get_extra_info('peername')
             logger.info(f'Connection from {peername}')
-            self.transport: KCPStreamTransport = transport
+            self.transport: Transport = transport
 
         def connection_lost(self, exc):
             logger.info(f'uid: {self.uid} Connection lost')

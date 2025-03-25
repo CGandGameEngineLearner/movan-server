@@ -7,20 +7,13 @@ from base.singleton import singleton
 from proto import client_pb2, client_pb2_grpc
 
 from config import config
-from loguru import logger
+from logger import logger
 from typing import Optional
 
 
-logger.add(
-    sink=config['Log']['sink'],
-    rotation=config['Log']['rotation'],
-    retention=config['Log']['retention'],
-    compression=config['Log']['compression'],
-    enqueue=config['Log']['enqueue'],
-    backtrace=config['Log']['backtrace'],
-    diagnose=config['Log']['diagnose'],
-    level=config['Log']['level'],
-)
+
+
+
 
 @singleton
 class account_server:

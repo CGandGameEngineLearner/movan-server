@@ -13,10 +13,10 @@ setup(
     version="0.1",
     packages=find_packages(),
     install_requires=read_requirements(),
-    python_requires='>=3.8',  # 根据你的项目需求调整 Python 版本
+    python_requires='>=3.11',
     author="lifesize",
     author_email="lifesize1@qq.com",
     description="Movan Server Implementation",
-    keywords="movan, server, sync, frame synchronization, game server",
+    keywords="movan, server, sync, lockstep, frame lock sync, frame synchronization, game server",
     url="https://github.com/CGandGameEngineLearner/movan-server",  # 项目的 URL
 )

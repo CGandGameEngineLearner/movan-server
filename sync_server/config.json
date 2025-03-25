@@ -1,0 +1,31 @@
+{
+  "KCP": {
+    "no_delay": true,
+    "update_interval": 10,
+    "resend_count": 2,
+    "no_congestion_control": true
+  },
+  "Network": {
+    "sync_host": "0.0.0.0",
+    "sync_port": 2025,
+    "rpc_host": "0.0.0.0",
+    "rpc_port": 50051
+  },
+  "Server": {
+    "num_of_rooms": 4,
+    "timeout": 5
+  },
+  "Log": {
+    "sink": "sync_server.log",
+    "rotation": "500 MB",
+    "retention": "10 days",
+    "compression": "zip",
+    "enqueue": true,
+    "backtrace": true,
+    "diagnose": true,
+    "level": "INFO"
+  },
+  "SyncCore": {
+    "update_interval": 40
+  }
+}

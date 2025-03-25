@@ -1,0 +1,31 @@
+{
+  "Network": {
+    "account_server_host": "0.0.0.0",
+    "account_server_port": 2027
+  },
+  "SyncServer": {
+    "urls": [
+      "127.0.0.1:50051"
+    ]
+  },
+  "Log": {
+    "sink": "account_server.log",
+    "rotation": "500 MB",
+    "retention": "10 days",
+    "compression": "zip",
+    "enqueue": true,
+    "backtrace": true,
+    "diagnose": true,
+    "level": "INFO"
+  },
+  "DataBase": {
+    "url": "mysql+pymysql://root:8868384asdf@localhost/movan_server"
+  },
+  "Security": {
+    "jwt_secret": "your-secret-key",
+    "excluded_methods": [
+      "/MovanClient.AccountServer/account_register",
+      "/MovanClient.AccountServer/account_login"
+    ]
+  }
+}

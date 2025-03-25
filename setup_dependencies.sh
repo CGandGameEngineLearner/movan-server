@@ -2,12 +2,12 @@
 set -e
 
 # 定义 Python 版本
-pythonVersion="3.13"
+pythonVersion="3.11"
 
 echo "Python $pythonVersion 未安装，准备自动安装 Python $pythonVersion"
 echo "加载中，请耐心等待，切勿关闭此窗口！"
 
-# 安装 Python 3.13 及其 venv 模块
+# 安装 Python 及其 venv 模块
 installPythonCommand="sudo apt install python${pythonVersion} python${pythonVersion}-venv"
 eval ${installPythonCommand}
 

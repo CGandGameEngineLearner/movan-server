@@ -2,12 +2,13 @@
 setlocal EnableDelayedExpansion
 
 echo ===================================================
-echo Protocol Buffers 3 Code Generator with gRPC Support
+echo Protocol Buffers 3 Code Generator
 echo ===================================================
 
 REM 配置虚拟环境路径（根据你的实际路径修改）
 set VENV_PATH=venv
 set VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat
+set PROTOC_PATH=movan_protobuf\protoc.exe
 
 echo ===================================================
 echo Checking Python virtual environment...
@@ -43,40 +44,34 @@ echo Python executable: %PYTHON%
 python --version
 
 echo ===================================================
-echo Installing required packages for protobuf3...
+echo Checking protoc executable...
 echo ===================================================
 
-REM 安装必要的包，确保版本兼容protobuf3，并添加mypy-protobuf
-echo Installing/Updating packages for protobuf3 compatibility...
-pip install -U grpcio-tools protobuf mypy-protobuf
-
-if %ERRORLEVEL% neq 0 (
-    echo Failed to install required packages.
+REM 检查protoc是否存在
+if not exist "%PROTOC_PATH%" (
+    echo [ERROR] protoc executable not found at '%PROTOC_PATH%'
+    echo Please make sure protoc.exe is available in the specified path.
     exit /b 1
 )
 
-echo Installed packages:
-pip list | findstr "grpcio protobuf mypy"
+echo Found protoc at: %PROTOC_PATH%
 
 echo ===================================================
-echo Compiling protobuf3 files with type annotations...
+echo Compiling protobuf3 files...
 echo ===================================================
 
 REM 确保目标目录存在
 if not exist ".\account_server\proto" mkdir ".\account_server\proto"
 if not exist ".\sync_server\proto" mkdir ".\sync_server\proto"
 
-
-
-REM 编译所有.proto文件到两个目标目录，包括gRPC服务代码和类型存根
 echo.
-echo Generating Protocol Buffers 3, gRPC code and type stubs (.pyi files)...
+echo Generating Protocol Buffers 3 code...
 echo.
 
 set ERRORS=0
 set TOTAL_FILES=0
 
-REM 统一使用Python的grpcio-tools来生成代码
+REM 使用本地的protoc.exe来生成代码
 for %%f in (.\movan_protobuf\*.proto) do (
     set /a TOTAL_FILES+=1
     echo Processing: %%f
@@ -90,10 +85,8 @@ for %%f in (.\movan_protobuf\*.proto) do (
     )
     
     echo Generating for account_server...
-    python -m grpc_tools.protoc -I=.\movan_protobuf ^
+    "%PROTOC_PATH%" -I=.\movan_protobuf ^
         --python_out=.\account_server\proto ^
-        --grpc_python_out=.\account_server\proto ^
-        --mypy_out=.\account_server\proto ^
         %%f
     
     if !ERRORLEVEL! neq 0 (
@@ -104,10 +97,8 @@ for %%f in (.\movan_protobuf\*.proto) do (
     )
     
     echo Generating for sync_server...
-    python -m grpc_tools.protoc -I=.\movan_protobuf ^
+    "%PROTOC_PATH%" -I=.\movan_protobuf ^
         --python_out=.\sync_server\proto ^
-        --grpc_python_out=.\sync_server\proto ^
-        --mypy_out=.\sync_server\proto ^
         %%f
     
     if !ERRORLEVEL! neq 0 (
@@ -119,10 +110,6 @@ for %%f in (.\movan_protobuf\*.proto) do (
     
     echo.
 )
-
-
-
-
 
 echo ===================================================
 echo Summary of proto3 code generation:
@@ -142,11 +129,11 @@ if !ERRORS! gtr 0 (
     echo [WARNING] Some files failed to compile properly.
     echo Please check the output above for details.
 ) else (
-    echo [SUCCESS] All files compiled successfully with type annotations!
+    echo [SUCCESS] All files compiled successfully!
 )
 
 echo ===================================================
-echo Proto3 compilation with type support completed!
+echo Proto3 compilation completed!
 echo ===================================================
 
 REM 提示用户回车继续

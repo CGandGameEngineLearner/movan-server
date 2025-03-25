@@ -1,156 +1,165 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-echo ===================================================
-echo Protocol Buffers 3 Code Generator with gRPC Support
-echo ===================================================
+REM 定义 Python 版本
+set "pythonVersion=3.11.9"
+set "pythonVersionBrief=3.11"
 
-REM 配置虚拟环境路径（根据你的实际路径修改）
-set VENV_PATH=venv
-set VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat
+REM 只保留 pythonVersion 的纯数字部分
+for /f "tokens=1-3 delims=." %%i in ("%pythonVersion%") do (
+    set "pythonVersionNumericString=%%i%%j%%k"
+)
 
-echo ===================================================
-echo Checking Python virtual environment...
-echo ===================================================
+set "installerUrl=https://mirrors.huaweicloud.com/python/%pythonVersion%/python-%pythonVersion%-amd64.exe"
+set "installerFile=python-%pythonVersion%-amd64.exe"
 
-REM 检查虚拟环境是否存在
-if not exist "%VENV_PATH%\" (
-    echo Virtual environment not found at '%VENV_PATH%'
+REM 定义安装路径
+set "userInstallPath=%LOCALAPPDATA%\Programs\Python\Python%pythonVersionNumericString%"
+
+REM 检查是否已经安装了此版本的 Python
+set "pythonInstalled=false"
+
+echo 检测Python %pythonVersionBrief% 安装情况...
+
+REM 方法1：检查注册表
+echo 1. 从注册表检测Python...
+reg query "HKCU\SOFTWARE\Python\PythonCore\%pythonVersionBrief%" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo 在注册表中找到 Python %pythonVersionBrief%
+    set "pythonInstalled=true"
+)
+
+REM 方法2：从开始菜单检测
+if "%pythonInstalled%"=="false" (
+    echo 2. 从开始菜单检测Python...
+    set "startMenuPath=%ProgramData%\Microsoft\Windows\Start Menu\Programs"
+    set "userStartMenuPath=%APPDATA%\Microsoft\Windows\Start Menu\Programs"
     
-    echo Creating new virtual environment...
-    python -m venv %VENV_PATH%
-    
-    if !ERRORLEVEL! neq 0 (
-        echo Failed to create virtual environment.
-        echo Please make sure Python is installed and available in PATH.
-        exit /b 1
+    REM 检查系统级开始菜单
+    if exist "%startMenuPath%\Python %pythonVersionBrief%" (
+        echo 在系统开始菜单找到 Python %pythonVersionBrief%
+        set "pythonInstalled=true"
+    ) else (
+        for /d %%d in ("%startMenuPath%\Python*") do (
+            echo %%~nxd | findstr /c:"Python %pythonVersionBrief%" >nul
+            if !errorlevel! equ 0 (
+                echo 在系统开始菜单找到 Python %pythonVersionBrief%
+                set "pythonInstalled=true"
+            )
+        )
     )
     
-    echo Virtual environment created successfully.
+    REM 检查用户级开始菜单
+    if exist "%userStartMenuPath%\Python %pythonVersionBrief%" (
+        echo 在用户开始菜单找到 Python %pythonVersionBrief%
+        set "pythonInstalled=true"
+    ) else (
+        for /d %%d in ("%userStartMenuPath%\Python*") do (
+            echo %%~nxd | findstr /c:"Python %pythonVersionBrief%" >nul
+            if !errorlevel! equ 0 (
+                echo 在用户开始菜单找到 Python %pythonVersionBrief%
+                set "pythonInstalled=true"
+            )
+        )
+    )
 )
+
+REM 方法3：直接检查安装路径
+if "%pythonInstalled%"=="false" (
+    echo 3. 检查Python安装路径...
+    if exist "%userInstallPath%\python.exe" (
+        echo 在 %userInstallPath% 找到Python可执行文件
+        set "pythonInstalled=true"
+    )
+    
+    set "altPath=%LOCALAPPDATA%\Programs\Python\Python%pythonVersionBrief%"
+    if exist "!altPath!\python.exe" (
+        echo 在 !altPath! 找到Python可执行文件
+        set "pythonInstalled=true"
+    )
+)
+
+REM 方法4：尝试执行Python并检查版本
+if "%pythonInstalled%"=="false" (
+    echo 4. 尝试执行Python检查版本...
+    where python >nul 2>&1
+    if !errorlevel! equ 0 (
+        for /f "tokens=2" %%v in ('python -V 2^>^&1') do (
+            echo %%v | findstr /b "%pythonVersionBrief%" >nul
+            if !errorlevel! equ 0 (
+                echo 找到匹配版本的Python: %%v
+                set "pythonInstalled=true"
+            )
+        )
+    )
+)
+
+if "%pythonInstalled%"=="true" (
+    echo Python %pythonVersion% 已安装在计算机上。
+) else (
+    echo Python %pythonVersion% 未在计算机上安装，准备自动安装Python %pythonVersion%
+    echo 正在加载中，请耐心等待，切勿关闭此窗口！
+
+    REM 下载 Python 安装程序
+    echo 正在下载 Python 安装程序...
+    powershell -Command "Invoke-WebRequest -Uri %installerUrl% -OutFile %installerFile%"
+
+    REM 安装 Python
+    echo 正在安装 Python，请注意弹出的权限申请窗口，请允许执行...
+    start /wait "" "%installerFile%" /quiet InstallAllUsers=0 PrependPath=1 DefaultJustForMeTargetDir="%userInstallPath%"
+
+    REM 将 Python 添加到系统环境变量中
+    setx PATH "%PATH%;%userInstallPath%"
+
+    REM 将 Python 添加到注册表
+    set "pythonPath=%userInstallPath%\python.exe"
+    reg add "HKCU\Software\Python\PythonCore\%pythonVersionBrief%" /ve /d "%pythonVersion%" /f
+    reg add "HKCU\Software\Python\PythonCore\%pythonVersionBrief%" /v "InstallPath" /d "%userInstallPath%" /f
+    reg add "HKCU\Software\Python\PythonCore\%pythonVersionBrief%" /v "ExecutablePath" /d "%pythonPath%" /f
+
+    REM 删除安装程序
+    echo Python 安装完成！删除安装程序...
+    del "%installerFile%"
+
+    echo Python %pythonVersion% 已安装成功
+)
+
+REM 确保 userInstallPath 变量已正确设置
+if not exist "%userInstallPath%\python.exe" (
+    for /f "tokens=*" %%p in ('where python 2^>nul') do (
+        set "userInstallPath=%%~dpp"
+        set "userInstallPath=!userInstallPath:~0,-1!"
+    )
+)
+
+REM 创建虚拟环境
+echo 创建Python虚拟环境...
+python%pythonVersionBrief% -m venv venv 2>nul
+if %errorlevel% neq 0 (
+    echo 使用python%pythonVersionBrief%命令失败，尝试使用完整路径...
+    if exist "%userInstallPath%\python.exe" (
+        echo 使用安装路径: %userInstallPath%\python.exe
+        "%userInstallPath%\python.exe" -m venv venv
+    ) else (
+        echo 尝试查找Python可执行文件...
+        where python 2>nul
+        if %errorlevel% equ 0 (
+            echo 使用系统Python创建虚拟环境
+            python -m venv venv
+        ) else (
+            echo 未能找到可用的Python，虚拟环境创建失败！
+            exit /b 1
+        )
+    )
+) else (
+    echo 成功使用python%pythonVersionBrief%创建虚拟环境
+)
+
 
 REM 激活虚拟环境
-echo Activating virtual environment...
-call "%VENV_ACTIVATE%"
+call venv\Scripts\activate.bat
 
-if %ERRORLEVEL% neq 0 (
-    echo Failed to activate virtual environment.
-    exit /b 1
-)
+@REM call run.bat
 
-echo Virtual environment activated successfully.
-echo Python executable: %PYTHON%
-python --version
-
-echo ===================================================
-echo Installing required packages for protobuf3...
-echo ===================================================
-
-REM 安装必要的包，确保版本兼容protobuf3，并添加mypy-protobuf
-echo Installing/Updating packages for protobuf3 compatibility...
-pip install -U grpcio-tools protobuf mypy-protobuf
-
-if %ERRORLEVEL% neq 0 (
-    echo Failed to install required packages.
-    exit /b 1
-)
-
-echo Installed packages:
-pip list | findstr "grpcio protobuf mypy"
-
-echo ===================================================
-echo Compiling protobuf3 files with type annotations...
-echo ===================================================
-
-REM 确保目标目录存在
-if not exist ".\account_server\proto" mkdir ".\account_server\proto"
-if not exist ".\sync_server\proto" mkdir ".\sync_server\proto"
-
-
-
-REM 编译所有.proto文件到两个目标目录，包括gRPC服务代码和类型存根
-echo.
-echo Generating Protocol Buffers 3, gRPC code and type stubs (.pyi files)...
-echo.
-
-set ERRORS=0
-set TOTAL_FILES=0
-
-REM 统一使用Python的grpcio-tools来生成代码
-for %%f in (.\movan_protobuf\*.proto) do (
-    set /a TOTAL_FILES+=1
-    echo Processing: %%f
-    echo --------------------------------------
-    
-    REM 验证proto文件是否使用proto3语法
-    type "%%f" | findstr /C:"syntax = \"proto3\"" > nul
-    if !ERRORLEVEL! neq 0 (
-        echo [WARNING] %%f might not specify proto3 syntax explicitly.
-        echo           Consider adding 'syntax = "proto3";' as the first line.
-    )
-    
-    echo Generating for account_server...
-    python -m grpc_tools.protoc -I=.\movan_protobuf ^
-        --python_out=.\account_server\proto ^
-        --grpc_python_out=.\account_server\proto ^
-        --mypy_out=.\account_server\proto ^
-        %%f
-    
-    if !ERRORLEVEL! neq 0 (
-        echo [ERROR] Failed to compile %%f for account_server
-        set /a ERRORS+=1
-    ) else (
-        echo [SUCCESS] Compiled %%f for account_server
-    )
-    
-    echo Generating for sync_server...
-    python -m grpc_tools.protoc -I=.\movan_protobuf ^
-        --python_out=.\sync_server\proto ^
-        --grpc_python_out=.\sync_server\proto ^
-        --mypy_out=.\sync_server\proto ^
-        %%f
-    
-    if !ERRORLEVEL! neq 0 (
-        echo [ERROR] Failed to compile %%f for sync_server
-        set /a ERRORS+=1
-    ) else (
-        echo [SUCCESS] Compiled %%f for sync_server
-    )
-    
-    echo.
-)
-
-
-
-
-
-echo ===================================================
-echo Summary of proto3 code generation:
-echo ===================================================
-echo Total proto files processed: !TOTAL_FILES!
-echo Errors encountered: !ERRORS!
-echo.
-
-echo Files in account_server/proto:
-dir /b ".\account_server\proto\"
-echo.
-echo Files in sync_server/proto:
-dir /b ".\sync_server\proto\"
-echo.
-
-if !ERRORS! gtr 0 (
-    echo [WARNING] Some files failed to compile properly.
-    echo Please check the output above for details.
-) else (
-    echo [SUCCESS] All files compiled successfully with type annotations!
-)
-
-echo ===================================================
-echo Proto3 compilation with type support completed!
-echo ===================================================
-
-REM 提示用户回车继续
+REM 运行结束后不立马退出
 pause
-
-REM 结束本地变量作用域
-endlocal
