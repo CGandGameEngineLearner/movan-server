@@ -13,7 +13,11 @@ from google.protobuf.json_format import MessageToDict
 
 class Crypto:
     """简单异或加密类，替代 AES_CBC"""
-    def __init__(self, key: bytes,salt: bytes):
+    def __init__(self, key: Union[bytes,str],salt: Union[bytes,str]):
+        if isinstance(key,str):
+            key = key.encode('utf-8')
+        if isinstance(salt,str):
+            salt = salt.encode('utf-8')
         self.key = key
         self.salt = salt
     

@@ -1,5 +1,5 @@
-import grpc
-from account_server.config import config
+
+from account.config import CONFIG
 from account_server import proto
 from logger import logger
 

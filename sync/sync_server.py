@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Optional, Union, Tuple
 from room import Room
 import asyncio
 
-
+from common.movan_rpc.server import RPCServer
 
 import utils
 import time
@@ -108,7 +108,7 @@ class SyncServer(SyncServerInterface):
 
 
     
-    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: str, crypto_salt: str):
         logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):
             self.token_dict[uid] = token

@@ -4,7 +4,7 @@ import asyncio
 class SyncServerInterface(ABC):
 
     @abstractmethod
-    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: bytes, crypto_salt: bytes):
+    async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: str, crypto_salt: str):
         pass
 
     @abstractmethod
