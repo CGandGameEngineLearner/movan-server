@@ -1,4 +1,4 @@
-from config import config
+from config import CONFIG
 import logging
 import logging.handlers  # 显式导入 logging.handlers
 import os
@@ -12,22 +12,22 @@ for handler in logger.handlers[:]:
     logger.removeHandler(handler)
 
 # 设置日志级别
-level = getattr(logging, config['Log']['level'], logging.INFO)
+level = getattr(logging, CONFIG['Log']['level'], logging.INFO)
 logger.setLevel(level)
 
 # 创建日志格式化器
 formatter = logging.Formatter('%(asctime)s | %(levelname)8s | %(filename)s:%(lineno)d - %(message)s')
 
 # 创建日志文件目录（如果不存在）
-log_path = config['Log']['sink']
+log_path = CONFIG['Log']['sink']
 log_dir = os.path.dirname(log_path)
 if log_dir and not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
 # 配置文件处理器
-if config['Log'].get('rotation'):
+if CONFIG['Log'].get('rotation'):
     # 使用 RotatingFileHandler 实现日志轮转
-    rotation = config['Log']['rotation']
+    rotation = CONFIG['Log']['rotation']
     if isinstance(rotation, str) and "MB" in rotation:
         max_bytes = int(rotation.split()[0]) * 1024 * 1024
     elif isinstance(rotation, str) and "GB" in rotation:
@@ -37,10 +37,10 @@ if config['Log'].get('rotation'):
     
     # 确定要保留的备份数量
     backup_count = 10  # 默认值
-    if config['Log'].get('retention') and isinstance(config['Log']['retention'], str):
-        if "days" in config['Log']['retention']:
+    if CONFIG['Log'].get('retention') and isinstance(CONFIG['Log']['retention'], str):
+        if "days" in CONFIG['Log']['retention']:
             try:
-                backup_count = int(config['Log']['retention'].split()[0])
+                backup_count = int(CONFIG['Log']['retention'].split()[0])
             except (ValueError, IndexError):
                 pass
     

@@ -2,7 +2,7 @@
 set -e
 
 # 定义 Python 版本
-pythonVersion="3.11"
+pythonVersion="3.11.9"
 
 echo "Python $pythonVersion 未安装，准备自动安装 Python $pythonVersion"
 echo "加载中，请耐心等待，切勿关闭此窗口！"

@@ -2,7 +2,7 @@ from typing import List, Dict
 
 import threading
 import time
-from config import config
+from config import CONFIG
 from sync_server_interface import SyncServerInterface
 
 
@@ -14,7 +14,7 @@ class SyncCore:
         self.user_set: set = set()
         self.mutex = threading.Lock()
         self.frame_count: int = 0
-        self.update_interval = config["SyncCore"]["update_interval"]
+        self.update_interval = CONFIG["SyncCore"]["update_interval"]
         self.sync_server: SyncServerInterface = sync_server
 
     def run(self):

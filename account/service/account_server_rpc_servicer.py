@@ -1,16 +1,12 @@
 
-import proto
-
-from common.movan_rpc.server import RPCServer
-
-from account_server.config import config
+from account_server.rpc.rpc_server import RPC_SERVER
 
 
-import service.user_service as user_service  # 使用完全限定导入
+from ..config import CONFIG
 
 
+from ..service import user_service 
 
-RPC_SERVER = RPCServer(config['Network']['account_server_host'], config['Network']['account_server_post'])
 
 
 

@@ -1,12 +1,12 @@
 from sync_core import SyncCore
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor
-from config import config
+from config import CONFIG
 from logger import logger
 import time
 class Room:
 
-    thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
+    thread_pool:ThreadPoolExecutor = ThreadPoolExecutor(max_workers=CONFIG["Server"]["num_of_rooms"])
     def __init__(self,room_id:int,sync_server):
         self.room_id:int = room_id
         self.sync_server = sync_server

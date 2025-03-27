@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 from contextlib import contextmanager
-from database.base import get_connection
+from ..database.base import get_connection
 
 @contextmanager
 def get_db_context():

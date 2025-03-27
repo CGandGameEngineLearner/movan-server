@@ -1,6 +1,6 @@
 
 
-from database.user import User
+from ..database.user import User
 
 def create_user(uid:str,password:str)->bool:
     # 检查用户是否已存在

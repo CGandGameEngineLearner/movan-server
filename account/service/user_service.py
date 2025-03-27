@@ -1,5 +1,5 @@
-import proto
-from repository import user_repository
+
+from ..repository import user_repository
 
 def account_register(uid:str,password:str):
     return user_repository.create_user(uid,password)

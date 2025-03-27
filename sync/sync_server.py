@@ -12,7 +12,7 @@ import utils
 import time
 from sync_server_interface import SyncServerInterface
 from common.design_pattern.singleton import singleton
-from config import config
+from config import CONFIG
 
 from user_info_manager import user_info_manager
 
@@ -46,7 +46,7 @@ class SyncServer(SyncServerInterface):
         self.proto_dict: Dict[str, SyncServer.Protocol] = {}
         self.token_dict: Dict[str, str] = {}
         self.crypto_dict: Dict[str, Crypto] = {}
-        self._thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=config["Server"]["num_of_rooms"])
+        self._thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=CONFIG["Server"]["num_of_rooms"])
 
         self._lock = asyncio.Lock()  # 使用异步锁
         self._message_queue = asyncio.Queue()  # 使用异步队列
@@ -181,7 +181,7 @@ class SyncServer(SyncServerInterface):
                     # 使用 wait_for 添加超时
                     uid, msg = await asyncio.wait_for(
                         self._message_queue.get(),
-                        timeout=config['KCP']['update_interval'] / 1000
+                        timeout=CONFIG['KCP']['update_interval'] / 1000
                     )
                 except asyncio.TimeoutError:
                     await self._check_connections()
@@ -219,7 +219,7 @@ class SyncServer(SyncServerInterface):
             timeout_uids = []
             
             for uid, timestamp in list(self._last_message_time_dict.items()):
-                if current_time - timestamp > config['Server']['timeout']:
+                if current_time - timestamp > CONFIG['Server']['timeout']:
                     timeout_uids.append(uid)
                     
         for uid in timeout_uids:
@@ -278,16 +278,16 @@ class SyncServer(SyncServerInterface):
             asyncio.create_task(self.sync_server.msg_handle(msg, self.transport))
 
 kcp_kwargs = {
-    'no_delay': config['KCP']['no_delay'],
-    'update_interval': config['KCP']['update_interval'],
-    'resend_count': config['KCP']['resend_count'],
-    'no_congestion_control': config['KCP']['no_congestion_control']
+    'no_delay': CONFIG['KCP']['no_delay'],
+    'update_interval': CONFIG['KCP']['update_interval'],
+    'resend_count': CONFIG['KCP']['resend_count'],
+    'no_congestion_control': CONFIG['KCP']['no_congestion_control']
 }
 
 sync_server = SyncServer(
-    config['Network']['sync_host'],
-    config['Network']['sync_port'],
-    config['Server']['num_of_rooms'],
+    CONFIG['Network']['sync_host'],
+    CONFIG['Network']['sync_port'],
+    CONFIG['Server']['num_of_rooms'],
     kcp_kwargs
 )
 
