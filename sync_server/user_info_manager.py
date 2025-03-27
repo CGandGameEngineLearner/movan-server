@@ -1,4 +1,4 @@
-from common.singleton import singleton
+from common.design_pattern.singleton import singleton
 from typing import Dict, Optional
 from threading import RLock
 from contextlib import contextmanager

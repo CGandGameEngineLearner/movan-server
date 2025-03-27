@@ -11,7 +11,7 @@ import asyncio
 import utils
 import time
 from sync_server_interface import SyncServerInterface
-from common.singleton import singleton
+from common.design_pattern.singleton import singleton
 from config import config
 
 from user_info_manager import user_info_manager
