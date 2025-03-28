@@ -10,14 +10,14 @@ from account.config import CONFIG
 from logger import logger
 from typing import Optional
 
-from rpc.rpc_server import RPC_SERVER
+from rpc.rpc_server import ACCOUNT_RPC_SERVER
 
 
 
 @singleton
 class account_server:
     def __init__(self):
-        self.rpc_server = RPC_SERVER
+        self.rpc_server = ACCOUNT_RPC_SERVER
 
     async def shutdown(self):
         await self.rpc_server.shutdown()

@@ -8,6 +8,8 @@ import asyncio
 
 from common.movan_rpc.server import RPCServer
 
+from rpc.rpc_server import SYNC_RPC_SERVER
+
 import utils
 import time
 from sync_server_interface import SyncServerInterface
@@ -20,7 +22,6 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 import asyncio.queues
 
-from sync_server_rpc_servicer import SyncServerRpcServicer
 
 import proto
 
@@ -42,7 +43,7 @@ class SyncServer(SyncServerInterface):
         for i in range(num_of_rooms):
             self._room_list.append(Room(i, self))
 
-        self._kcp_server: Optional[asyncio.Server] = None
+        self._server: Optional[asyncio.Server] = None
         self.proto_dict: Dict[str, SyncServer.Protocol] = {}
         self.token_dict: Dict[str, str] = {}
         self.crypto_dict: Dict[str, Crypto] = {}
@@ -54,7 +55,7 @@ class SyncServer(SyncServerInterface):
         self._process_message_task = None  # 消息处理任务
         self._process_rpc_task = None  # RPC 服务任务
         self._temp_queue = []  # 用于存储非协程上下文中的消息
-        # self._rpc_server: Optional[grpc.aio.Server] = None
+        
         
     @asynccontextmanager
     async def _safe_operation(self, operation: str):
@@ -69,12 +70,12 @@ class SyncServer(SyncServerInterface):
             self._lock.release()
 
     def __del__(self):
-        self._thread_pool.shutdown(wait=True)
+        self.shutdown()
 
-    async def initialize_server(self):
+    async def start(self):
         loop = asyncio.get_running_loop()
 
-        self._kcp_server = await loop.create_server(
+        self._server = await loop.create_server(
             lambda: self.Protocol(self),
             host=self._host,
             port=self._port,
@@ -82,32 +83,14 @@ class SyncServer(SyncServerInterface):
         self._running = True
         self._process_message_task = asyncio.create_task(self._process_message_queue())
         self._process_rpc_task = asyncio.create_task(self._process_rpc_server())
-        async with self._kcp_server:
-            await self._kcp_server.serve_forever()
+        async with self._server:
+            await self._server.serve_forever()
 
     async def _process_rpc_server(self):
-        pass
-        # # 异步 gRPC 服务器
-        # self._rpc_server = grpc.aio.server()
-        # proto.server_pb2_grpc.add_SyncServerServicer_to_server(
-        #     SyncServerRpcServicer(self),
-        #     self._rpc_server
-        # )
-        # self._rpc_server.add_insecure_port(f"{config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
-        
-        # # 添加 gRPC 反射服务
-        # service_names = (
-        #     proto.server_pb2.DESCRIPTOR.services_by_name['SyncServer'].full_name,
-        #     reflection.SERVICE_NAME,
-        # )
-        # reflection.enable_server_reflection(service_names, self._rpc_server)
-        
-        # logger.info(f"启动 gRPC 服务器在 {config['Network']['rpc_host']}:{config['Network']['rpc_port']}")
-        # await self._rpc_server.start()
-        # await self._rpc_server.wait_for_termination()
+        await SYNC_RPC_SERVER.start()
 
 
-    
+    @SYNC_RPC_SERVER.method
     async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: str, crypto_salt: str):
         logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):
@@ -116,6 +99,7 @@ class SyncServer(SyncServerInterface):
             self.crypto_dict[uid] = crypto
         user_info_manager.set_user_info(uid, {"room_id": room_id})
 
+    @SYNC_RPC_SERVER.method
     async def remove_user(self, uid):
         self._cleanup_user(uid)
         async with self._safe_operation("remove_user"):
@@ -238,20 +222,22 @@ class SyncServer(SyncServerInterface):
             self._room_list[room_id].leave_room(uid)
         logger.info(f"Cleaned up resources for {uid}")
 
-    async def run(self):
-        await self.initialize_server()
+    def run(self):
+        asyncio.run(self.start())
 
     async def shutdown(self):
         """异步关闭服务器"""
         self._running = False
+        self._thread_pool.shutdown(wait=True)
         if self._process_message_task:
             await self._message_queue.put((None, None))
             await self._process_message_task
-        await self._kcp_server.close()
+        await self._server.close()
+        await SYNC_RPC_SERVER.shutdown()
 
     class Protocol(asyncio.Protocol):
         def __init__(self):
-            self.sync_server = sync_server
+            self.sync_server = SYNC_SERVER
             self.on_con_lost: asyncio.Future = asyncio.Future()
             self.uid: Optional[str] = None
 
@@ -284,7 +270,7 @@ kcp_kwargs = {
     'no_congestion_control': CONFIG['KCP']['no_congestion_control']
 }
 
-sync_server = SyncServer(
+SYNC_SERVER = SyncServer(
     CONFIG['Network']['sync_host'],
     CONFIG['Network']['sync_port'],
     CONFIG['Server']['num_of_rooms'],
@@ -295,8 +281,11 @@ if __name__ == '__main__':
     logger.info("Sync server started")
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
-    asyncio.run(sync_server.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt))
-    asyncio.run(sync_server.allocate_user('lifesize1', '114514', 0, crypto_key, crypto_salt))
-    asyncio.run(sync_server.allocate_user('lifesize2', '114514', 0, crypto_key, crypto_salt))
-    asyncio.run(sync_server.allocate_user('lifesize3', '114514', 0, crypto_key, crypto_salt))
-    asyncio.run(sync_server.run())
+
+    async def test():
+        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.start()
+    asyncio.run(test())
