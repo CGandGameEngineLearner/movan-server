@@ -16,7 +16,7 @@ from sync_server_interface import SyncServerInterface
 from common.design_pattern.singleton import singleton
 from config import CONFIG
 
-from user_info_manager import user_info_manager
+from user_info_manager import USER_INFO_MANAGER
 
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -97,13 +97,12 @@ class SyncServer(SyncServerInterface):
             self.token_dict[uid] = token
             crypto: Crypto = Crypto(crypto_key, crypto_salt)
             self.crypto_dict[uid] = crypto
-        user_info_manager.set_user_info(uid, {"room_id": room_id})
+        USER_INFO_MANAGER.set_user_info(uid, {"room_id": room_id})
 
     @SYNC_RPC_SERVER.method
     async def remove_user(self, uid):
         self._cleanup_user(uid)
         async with self._safe_operation("remove_user"):
-            user_info_manager.remove_user_info(uid)
             if uid in self.transport_dict:
                 self.transport_dict.pop(uid, None)
 
@@ -112,7 +111,7 @@ class SyncServer(SyncServerInterface):
             
             if uid in self.crypto_dict:
                 self.crypto_dict.pop(uid, None)
-        user_info_manager.remove_user_info(uid)
+        USER_INFO_MANAGER.remove_user_info(uid)
 
     async def msg_handle(self, msg: dict, transport: Transport):
         # logger.debug(msg)
@@ -121,7 +120,7 @@ class SyncServer(SyncServerInterface):
             self.transport_dict[uid] = transport
             self._last_message_time_dict[uid] = time.time()
 
-        room_id: int = user_info_manager.get_user_info(uid)['room_id']
+        room_id: int = USER_INFO_MANAGER.get_user_info(uid)['room_id']
         # 使用线程池处理房间消息
         await asyncio.get_event_loop().run_in_executor(
             self._thread_pool, 
@@ -217,7 +216,7 @@ class SyncServer(SyncServerInterface):
                 self.transport_dict.pop(uid, None)
             if uid in self._last_message_time_dict:
                 self._last_message_time_dict.pop(uid, None)
-        room_id: int = user_info_manager.get_user_info(uid)['room_id']
+        room_id: int = USER_INFO_MANAGER.get_user_info(uid)['room_id']
         if room_id is not None:
             self._room_list[room_id].leave_room(uid)
         logger.info(f"Cleaned up resources for {uid}")
