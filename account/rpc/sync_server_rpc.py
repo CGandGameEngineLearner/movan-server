@@ -1,31 +1,41 @@
 
 from account.config import CONFIG
-from account_server import proto
-from logger import logger
+from account import proto
+from sync.logger import logger
 
 from typing import Dict
+from sync_server_stub import SyncServerStub
+from common.utils import extract_host_port
 
-SYNC_SERVER_STUBS:Dict[int,proto.server_pb2_grpc.SyncServerStub] = {}
+import asyncio
 
-for i,url in enumerate(config['SyncServer']['urls']):
-    channel = grpc.insecure_channel(url)
-    stub = proto.server_pb2_grpc.SyncServerStub(channel)
+SYNC_SERVER_STUBS:Dict[int,SyncServerStub] = {}
+
+for i,url in enumerate(CONFIG['SyncServer']['urls']):
+    host,port = extract_host_port(url)
+    stub = SyncServerStub(host,port)
     SYNC_SERVER_STUBS[i] = stub
         
 
+def init():
+    for stub in SYNC_SERVER_STUBS.values():
+        asyncio.create_task(stub.start())
+    
 
 
 if __name__ == '__main__':
-    crypto_key = b'12345678901234567890123456789012'
-    crypto_salt = b'1234567890123456'
-    request = proto.server_pb2.AllocateUserRequest(
-        uid='lifesize0',
-        token ='114514',
-        room_id = 0,
-        crypto_key=crypto_key,
-        crypto_salt=crypto_salt
-    )
+    crypto_key = '12345678901234567890123456789012'
+    crypto_salt = '1234567890123456'
+    
     import time
-    time.sleep(10)
-    respond = SYNC_SERVER_STUBS[0].allocate_user(request)
-    print(respond)
+    time.sleep(5)
+   
+    async def test():
+        init()
+        await asyncio.sleep(5)
+        respond = await SYNC_SERVER_STUBS[0].allocate_user('lifesize0', '114514', 0, crypto_key, crypto_salt)
+        print(respond)
+        
+    asyncio.run(test())
+
+    

@@ -1,7 +1,7 @@
 from common.design_pattern.singleton import singleton
 from typing import Dict, Optional
 import asyncio
-from contextlib import contextmanager
+import contextlib
 from logger import logger
 
 @singleton
@@ -14,7 +14,7 @@ class UserInfoManager:
         self._user_info_dict: Dict[str, Dict] = {}
         self._lock = asyncio.Lock()
         
-    @contextmanager
+    @contextlib.asynccontextmanager
     async def _safe_operation(self, operation: str):
         """
         安全操作的上下文管理器

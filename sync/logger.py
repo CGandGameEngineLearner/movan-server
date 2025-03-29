@@ -1,4 +1,4 @@
-from config import CONFIG
+from sync.config import CONFIG
 import logging
 import logging.handlers  # 显式导入 logging.handlers
 import os

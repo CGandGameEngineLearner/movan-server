@@ -5,8 +5,10 @@ from utils import Crypto
 from typing import Dict, List, Any, Optional, Union, Tuple
 from room import Room
 import asyncio
+from queue import Queue
+from common.container.dict import ThreadSafeDict
 
-from common.movan_rpc.server import RPCServer
+
 
 from rpc.rpc_server import SYNC_RPC_SERVER
 
@@ -54,7 +56,8 @@ class SyncServer(SyncServerInterface):
         self._last_message_time_dict: Dict[str, float] = dict()
         self._process_message_task = None  # 消息处理任务
         self._process_rpc_task = None  # RPC 服务任务
-        self._temp_queue = []  # 用于存储非协程上下文中的消息
+        self._temp_queue = Queue() # 其他线程把消息放到这个队列
+        
         
         
     @asynccontextmanager
@@ -90,16 +93,16 @@ class SyncServer(SyncServerInterface):
         await SYNC_RPC_SERVER.start()
 
 
-    @SYNC_RPC_SERVER.method
+    
     async def allocate_user(self, uid: str, token: str, room_id: int, crypto_key: str, crypto_salt: str):
         logger.info(f"{uid}")
         async with self._safe_operation("allocate_user"):
             self.token_dict[uid] = token
             crypto: Crypto = Crypto(crypto_key, crypto_salt)
             self.crypto_dict[uid] = crypto
-        USER_INFO_MANAGER.set_user_info(uid, {"room_id": room_id})
+        await USER_INFO_MANAGER.set_user_info(uid, {"room_id": room_id})
 
-    @SYNC_RPC_SERVER.method
+ 
     async def remove_user(self, uid):
         self._cleanup_user(uid)
         async with self._safe_operation("remove_user"):
@@ -111,7 +114,7 @@ class SyncServer(SyncServerInterface):
             
             if uid in self.crypto_dict:
                 self.crypto_dict.pop(uid, None)
-        USER_INFO_MANAGER.remove_user_info(uid)
+        await USER_INFO_MANAGER.remove_user_info(uid)
 
     async def msg_handle(self, msg: dict, transport: Transport):
         # logger.debug(msg)
@@ -142,10 +145,7 @@ class SyncServer(SyncServerInterface):
                 # 如果在事件循环中，使用异步方式
                 loop.create_task(self._message_queue.put((uid, msg)))
             except RuntimeError:
-                # 如果不在事件循环中，使用同步方式
-                if not hasattr(self, '_temp_queue'):
-                    self._temp_queue = []
-                self._temp_queue.append((uid, msg))
+                self._temp_queue.put((uid, msg))
                 
         except Exception as e:
             logger.error(f"Error preparing message for {uid}: {e}")
@@ -155,10 +155,8 @@ class SyncServer(SyncServerInterface):
         while self._running:
             try:
                 # 处理临时队列中的消息
-                if hasattr(self, '_temp_queue') and self._temp_queue:
-                    for uid, msg in self._temp_queue:
-                        await self._message_queue.put((uid, msg))
-                    self._temp_queue.clear()
+                while self._temp_queue.qsize() > 0:
+                    await self._message_queue.put(self._temp_queue.get())
 
                 try:
                     # 使用 wait_for 添加超时
@@ -276,15 +274,26 @@ SYNC_SERVER = SyncServer(
     kcp_kwargs
 )
 
+
+
+@SYNC_RPC_SERVER.method
+async def allocate_user(uid: str, token: str, room_id: int, crypto_key: str, crypto_salt: str):
+    return await SYNC_SERVER.allocate_user(uid, token, room_id, crypto_key, crypto_salt)
+
+@SYNC_RPC_SERVER.method
+async def remove_user(uid):
+    return await SYNC_SERVER.remove_user(uid)
+    
+
 if __name__ == '__main__':
     logger.info("Sync server started")
     crypto_key = b'12345678901234567890123456789012'
     crypto_salt = b'1234567890123456'
 
     async def test():
-        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
-        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
-        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
-        await SYNC_SERVER.allocate_user('lifesize', '114514', 0, crypto_key, crypto_salt)
+        # await SYNC_SERVER.allocate_user('lifesize1', '114514', 0, crypto_key, crypto_salt)
+        # await SYNC_SERVER.allocate_user('lifesize2', '114514', 0, crypto_key, crypto_salt)
+        # await SYNC_SERVER.allocate_user('lifesize3', '114514', 0, crypto_key, crypto_salt)
+        # await SYNC_SERVER.allocate_user('lifesize4', '114514', 0, crypto_key, crypto_salt)
         await SYNC_SERVER.start()
     asyncio.run(test())

@@ -9,7 +9,7 @@ def read_requirements(filename='requirements.txt'):
         return requirements
 
 setup(
-    name="movan-server",
+    name="movan_rpc",
     version="0.1",
     packages=find_packages(),
     install_requires=read_requirements(),
@@ -17,6 +17,6 @@ setup(
     author="lifesize",
     author_email="lifesize1@qq.com",
     description="Movan Server Implementation",
-    keywords="movan, server, sync, lockstep, frame lock sync, frame synchronization, game server",
+    keywords="rpc, movan, server, sync, lockstep, frame lock sync, frame synchronization, game server",
     url="https://github.com/CGandGameEngineLearner/movan-server",  # 项目的 URL
 )
