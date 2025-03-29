@@ -186,7 +186,7 @@ class SyncServer(SyncServerInterface):
             
             if transport and not transport.is_closing():
                 try:
-                    logger.debug(msg)
+                    # logger.debug(msg)
                     transport.write(msg)
                     success = True
                 except Exception as e:

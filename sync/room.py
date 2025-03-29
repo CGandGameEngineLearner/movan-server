@@ -42,8 +42,13 @@ class Room:
             self.run()
 
     def leave_room(self,uid:str):
-        self.sync_core.user_set.remove(uid)
-        self.user_set.remove(uid)
+        if uid in self.user_set:
+            self.user_set.remove(uid)
+        if uid in self.sync_core.user_set:
+            self.sync_core.user_set.remove(uid)
+        if uid in self.prepare_user_set:
+            self.prepare_user_set.remove(uid)
+        
         if len(self.user_set) == 0:
             self.stop()
 
