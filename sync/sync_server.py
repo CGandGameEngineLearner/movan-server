@@ -78,7 +78,7 @@ class SyncServer(SyncServerInterface):
         loop = asyncio.get_running_loop()
 
         self._server = await loop.create_server(
-            lambda: self.Protocol(self),
+            lambda: self.Protocol(),
             host=self._host,
             port=self._port,
         )
@@ -116,13 +116,13 @@ class SyncServer(SyncServerInterface):
         await USER_INFO_MANAGER.remove_user_info(uid)
 
     async def msg_handle(self, msg: dict, transport: Transport):
-        # logger.debug(msg)
+        logger.debug(msg)
         uid = msg['uid']
         async with self._safe_operation("update transport"):
             self.transport_dict[uid] = transport
             self._last_message_time_dict[uid] = time.time()
 
-        room_id: int = USER_INFO_MANAGER.get_user_info(uid)['room_id']
+        room_id: int = (await USER_INFO_MANAGER.get_user_info(uid))['room_id']
         # 使用线程池处理房间消息
         await asyncio.get_event_loop().run_in_executor(
             self._thread_pool, 
@@ -175,16 +175,18 @@ class SyncServer(SyncServerInterface):
 
             except Exception as e:
                 logger.error(f"Error in message queue processor: {e}")
-                await asyncio.sleep(CONFIG['KCP']['update_interval'] / 1000)
+                await asyncio.sleep(CONFIG['Server']['update_interval'] / 1000)
 
     async def _send_message(self, uid: str, msg: bytes):
         """异步处理单个消息的发送"""
+        # logger.debug(msg)
         success:bool = False
         async with self._safe_operation("send_message"):
             transport = self.transport_dict.get(uid)
             
             if transport and not transport.is_closing():
                 try:
+                    logger.debug(msg)
                     transport.write(msg)
                     success = True
                 except Exception as e:
@@ -213,7 +215,7 @@ class SyncServer(SyncServerInterface):
                 self.transport_dict.pop(uid, None)
             if uid in self._last_message_time_dict:
                 self._last_message_time_dict.pop(uid, None)
-        room_id: int = USER_INFO_MANAGER.get_user_info(uid)['room_id']
+        room_id: int = (await USER_INFO_MANAGER.get_user_info(uid))['room_id']
         if room_id is not None:
             self._room_list[room_id].leave_room(uid)
         logger.info(f"Cleaned up resources for {uid}")
@@ -280,13 +282,13 @@ async def remove_user(uid):
 
 if __name__ == '__main__':
     logger.info("Sync server started")
-    crypto_key = b'12345678901234567890123456789012'
-    crypto_salt = b'1234567890123456'
+    crypto_key = '12345678901234567890123456789012'
+    crypto_salt = '1234567890123456'
 
     async def test():
-        # await SYNC_SERVER.allocate_user('lifesize1', '114514', 0, crypto_key, crypto_salt)
-        # await SYNC_SERVER.allocate_user('lifesize2', '114514', 0, crypto_key, crypto_salt)
-        # await SYNC_SERVER.allocate_user('lifesize3', '114514', 0, crypto_key, crypto_salt)
-        # await SYNC_SERVER.allocate_user('lifesize4', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize1', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize2', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize3', '114514', 0, crypto_key, crypto_salt)
+        await SYNC_SERVER.allocate_user('lifesize4', '114514', 0, crypto_key, crypto_salt)
         await SYNC_SERVER.start()
     asyncio.run(test())

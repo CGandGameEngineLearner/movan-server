@@ -35,7 +35,7 @@ backtrace = true
 # 是否记录诊断信息
 diagnose = true
 # 日志记录级别（DEBUG, INFO, WARN, ERROR, CRITICAL）
-level = "INFO"
+level = "DEBUG"
 
 # 同步核心配置
 [SyncCore]

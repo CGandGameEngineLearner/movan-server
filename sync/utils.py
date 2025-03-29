@@ -176,7 +176,7 @@ def decrypt_msg(data: bytes, token_dict: Dict[str, str], crypto_dict: Dict[str, 
             return {
                 "uid": uid, 
                 "data": data_content, 
-                "extra_data": extra_data
+                "extra_data": extra_data_dict
             }
         except Exception as e:
             logger.error(f"Error decrypting message: {e}")
