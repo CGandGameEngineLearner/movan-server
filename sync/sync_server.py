@@ -32,14 +32,13 @@ from logger import logger
 
 @singleton
 class SyncServer(SyncServerInterface):
-    def __init__(self, host: str, port: int, num_of_rooms: int, kcp_kwargs=None):
+    def __init__(self, host: str, port: int, num_of_rooms: int):
         self._host = host
         self._port = port
         
         self.transport_dict: Dict[str, Transport] = {}
         self._room_list: List[Room] = []
         self._max_num_of_rooms = num_of_rooms
-        self._kcp_kwargs: dict = kcp_kwargs
         self._running: bool = False
 
         for i in range(num_of_rooms):
@@ -162,7 +161,7 @@ class SyncServer(SyncServerInterface):
                     # 使用 wait_for 添加超时
                     uid, msg = await asyncio.wait_for(
                         self._message_queue.get(),
-                        timeout=CONFIG['KCP']['update_interval'] / 1000
+                        timeout=CONFIG['Server']['message_queue_update_interval'] / 1000
                     )
                 except asyncio.TimeoutError:
                     await self._check_connections()
@@ -176,7 +175,7 @@ class SyncServer(SyncServerInterface):
 
             except Exception as e:
                 logger.error(f"Error in message queue processor: {e}")
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(CONFIG['KCP']['update_interval'] / 1000)
 
     async def _send_message(self, uid: str, msg: bytes):
         """异步处理单个消息的发送"""
@@ -260,18 +259,12 @@ class SyncServer(SyncServerInterface):
             self.uid = msg['uid']
             asyncio.create_task(self.sync_server.msg_handle(msg, self.transport))
 
-kcp_kwargs = {
-    'no_delay': CONFIG['KCP']['no_delay'],
-    'update_interval': CONFIG['KCP']['update_interval'],
-    'resend_count': CONFIG['KCP']['resend_count'],
-    'no_congestion_control': CONFIG['KCP']['no_congestion_control']
-}
+
 
 SYNC_SERVER = SyncServer(
     CONFIG['Network']['sync_host'],
     CONFIG['Network']['sync_port'],
     CONFIG['Server']['num_of_rooms'],
-    kcp_kwargs
 )
 
 

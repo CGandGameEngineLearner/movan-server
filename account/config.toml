@@ -1,0 +1,47 @@
+# 账户服务器网络配置
+[Network]
+# 服务器监听地址，0.0.0.0表示监听所有网络接口
+account_server_host = "0.0.0.0"
+# 账户服务器监听端口
+account_server_port = 2027
+
+# 同步服务器配置
+[SyncServer]
+# 同步服务器地址列表，支持多个服务器地址
+urls = ["127.0.0.1:50051"]
+
+# 日志配置
+[Log]
+# 日志文件输出路径
+sink = "account_server.log"
+# 日志文件轮转大小，超过此大小将创建新文件
+rotation = "500 MB"
+# 日志文件保留时间，超过此时间的日志将被删除
+retention = "10 days"
+# 日志压缩方式
+compression = "zip"
+# 是否启用异步日志（提高性能）
+enqueue = true
+# 是否记录错误回溯信息（用于调试）
+backtrace = true
+# 是否记录诊断信息
+diagnose = true
+# 日志记录级别（DEBUG, INFO, WARN, ERROR, CRITICAL）
+level = "INFO"
+
+# 数据库配置
+[DataBase]
+# 数据库类型，支持sqlite、mysql等
+type = "sqlite"
+# SQLite数据库文件路径
+file = "user.db"
+
+# 安全配置
+[Security]
+# JWT(JSON Web Token)密钥，用于生成和验证身份令牌
+jwt_secret = "your-secret-key"
+# 不需要JWT验证的API方法列表
+excluded_methods = [
+    "/MovanClient.AccountServer/account_register",
+    "/MovanClient.AccountServer/account_login"
+]

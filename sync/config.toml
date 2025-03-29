@@ -1,0 +1,43 @@
+# 服务器网络配置
+[Network]
+# 同步服务监听主机地址，0.0.0.0表示监听所有网络接口
+sync_host = "0.0.0.0"
+# 同步服务监听端口
+sync_port = 2025
+# RPC服务监听主机地址
+rpc_host = "0.0.0.0"
+# RPC服务监听端口
+rpc_port = 50051
+
+# 服务器基本配置参数
+[Server]
+# 支持的房间数量上限
+num_of_rooms = 4
+# 超时时间（单位：秒）
+timeout = 5
+# 消息队列更新间隔（单位：毫秒）
+message_queue_update_interval = 10
+
+# 日志配置
+[Log]
+# 日志文件输出路径
+sink = "sync_server.log"
+# 日志文件轮转大小
+rotation = "500 MB"
+# 日志文件保留时间
+retention = "10 days"
+# 日志压缩方式
+compression = "zip"
+# 是否启用异步日志（提高性能）
+enqueue = true
+# 是否记录错误回溯信息
+backtrace = true
+# 是否记录诊断信息
+diagnose = true
+# 日志记录级别（DEBUG, INFO, WARN, ERROR, CRITICAL）
+level = "INFO"
+
+# 同步核心配置
+[SyncCore]
+# 同步更新间隔（单位：毫秒）
+update_interval = 40

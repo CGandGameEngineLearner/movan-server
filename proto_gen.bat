@@ -5,7 +5,7 @@ echo ===================================================
 echo Protocol Buffers 3 Code Generator
 echo ===================================================
 
-REM é…ç½®è™šæ‹Ÿç¯å¢ƒè·¯å¾„ï¼ˆæ ¹æ®ä½ çš„å®é™…è·¯å¾„ä¿®æ”¹ï¼‰
+REM ÅäÖÃĞéÄâ»·¾³Â·¾¶£¨¸ù¾İÄãµÄÊµ¼ÊÂ·¾¶ĞŞ¸Ä£©
 set VENV_PATH=venv
 set VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat
 set PROTOC_PATH=movan_protobuf\protoc.exe
@@ -14,7 +14,7 @@ echo ===================================================
 echo Checking Python virtual environment...
 echo ===================================================
 
-REM æ£€æŸ¥è™šæ‹Ÿç¯å¢ƒæ˜¯å¦å­˜åœ¨
+REM ¼ì²éĞéÄâ»·¾³ÊÇ·ñ´æÔÚ
 if not exist "%VENV_PATH%\" (
     echo Virtual environment not found at '%VENV_PATH%'
     
@@ -30,7 +30,7 @@ if not exist "%VENV_PATH%\" (
     echo Virtual environment created successfully.
 )
 
-REM æ¿€æ´»è™šæ‹Ÿç¯å¢ƒ
+REM ¼¤»îĞéÄâ»·¾³
 echo Activating virtual environment...
 call "%VENV_ACTIVATE%"
 
@@ -47,7 +47,7 @@ echo ===================================================
 echo Checking protoc executable...
 echo ===================================================
 
-REM æ£€æŸ¥protocæ˜¯å¦å­˜åœ¨
+REM ¼ì²éprotocÊÇ·ñ´æÔÚ
 if not exist "%PROTOC_PATH%" (
     echo [ERROR] protoc executable not found at '%PROTOC_PATH%'
     echo Please make sure protoc.exe is available in the specified path.
@@ -60,7 +60,7 @@ echo ===================================================
 echo Compiling protobuf3 files...
 echo ===================================================
 
-REM ç¡®ä¿ç›®æ ‡ç›®å½•å­˜åœ¨
+REM È·±£Ä¿±êÄ¿Â¼´æÔÚ
 if not exist ".\account_server\proto" mkdir ".\account_server\proto"
 if not exist ".\sync_server\proto" mkdir ".\sync_server\proto"
 
@@ -71,13 +71,13 @@ echo.
 set ERRORS=0
 set TOTAL_FILES=0
 
-REM ä½¿ç”¨æœ¬åœ°çš„protoc.exeæ¥ç”Ÿæˆä»£ç 
+REM Ê¹ÓÃ±¾µØµÄprotoc.exeÀ´Éú³É´úÂë
 for %%f in (.\movan_protobuf\*.proto) do (
     set /a TOTAL_FILES+=1
     echo Processing: %%f
     echo --------------------------------------
     
-    REM éªŒè¯protoæ–‡ä»¶æ˜¯å¦ä½¿ç”¨proto3è¯­æ³•
+    REM ÑéÖ¤protoÎÄ¼şÊÇ·ñÊ¹ÓÃproto3Óï·¨
     type "%%f" | findstr /C:"syntax = \"proto3\"" > nul
     if !ERRORLEVEL! neq 0 (
         echo [WARNING] %%f might not specify proto3 syntax explicitly.
@@ -136,8 +136,8 @@ echo ===================================================
 echo Proto3 compilation completed!
 echo ===================================================
 
-REM æç¤ºç”¨æˆ·å›è½¦ç»§ç»­
+REM ÌáÊ¾ÓÃ»§»Ø³µ¼ÌĞø
 pause
 
-REM ç»“æŸæœ¬åœ°å˜é‡ä½œç”¨åŸŸ
+REM ½áÊø±¾µØ±äÁ¿×÷ÓÃÓò
 endlocal
