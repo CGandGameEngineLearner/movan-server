@@ -5,9 +5,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import common
 from . import user
+from . import role
 
 __all__ = [
-    "user"
+    "user",
+    "role",
 ]
 
 from contextlib import contextmanager

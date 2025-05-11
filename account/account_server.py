@@ -10,7 +10,8 @@ from account.config import CONFIG
 from logger import logger
 from typing import Optional
 
-from rpc.rpc_server import ACCOUNT_RPC_SERVER
+from account.rpc.rpc_server import ACCOUNT_RPC_SERVER
+import service.account_server_rpc_servicer
 
 
 
